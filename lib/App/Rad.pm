@@ -1315,6 +1315,10 @@ Breno G. de Oliveira, C<< <garu at cpan.org> >>
 
 Ben Hengst
 
+Eden Cardim
+
+Esteban Manchado
+
 Fernando Correa
 
 Flavio Glock
