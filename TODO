@@ -1,0 +1,4 @@
+plugins!
+
+um de Authentication e outro de Authorization (ou basta um?)
+um pro Getopt::Euclid ? (não sei se dá / se vale a pena)
