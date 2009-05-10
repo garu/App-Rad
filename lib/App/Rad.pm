@@ -1,6 +1,7 @@
 package App::Rad;
 use 5.006;
 use App::Rad::Help;
+use App::Rad::Option;
 use Carp                ();
 use warnings;
 use strict;
@@ -151,18 +152,113 @@ sub _register_functions {
 sub _get_input {
     my $c = shift;
 
-    my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
-            ? shift @ARGV
-            : ''
-            ;
+    #my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
+    #        ? shift @ARGV
+    #        : ''
+    #        ;
+    #my @argv = @ARGV;
+
+    my $cmd;
+    my @globals;
+    while(my $val = shift @ARGV) {
+        if(substr($val, 0, 1) ne '-') {
+            $cmd = $val;
+            last;
+        }
+        eval {
+            push @globals, $val;
+        }
+    }
+    if((@globals or not defined $cmd) and exists $c->{_global_opts}){
+        @ARGV = @globals;
+        $c->_set_options(@globals ? @globals : 1);
+    }
+	else {
+		@ARGV = (@globals, @ARGV);
+	}
 
     @{$c->argv} = @ARGV;
-    $c->{'cmd'} = $cmd;
+    $c->{'cmd'} = $cmd || '';
 
     $c->debug('received command: ' . $c->{'cmd'});
     $c->debug('received parameters: ' . join (' ', @{$c->argv} ));
 
-    $c->_tinygetopt();
+    if($c->cmd and exists $c->{_get_opt}->{ $c->cmd }){
+        $c->_set_options();
+    }
+    else {
+        $c->_tinygetopt();
+    }
+}
+
+# including Options Plugin in core
+# God help me
+
+sub _set_options {
+   my $c = shift;
+   my @globals = @_;
+   my @opts;
+   push @opts, "help" unless $c->{_no_command_help};
+   unless(@globals){
+      push @opts, @{ $c->{_get_opt}->{ $c->cmd } };
+   }
+   else {
+      push @opts, @{ $c->{_get_opt_global} } if exists $c->{_get_opt_global};
+      push @opts, "version" unless $c->{_no_program_version} or not defined $main::VERSION;
+   }
+
+   $c->getopt(@opts) || Carp::croak;
+
+   if(not @globals and exists $c->options->{help} and not $c->{_no_command_help}){
+       $c->argv->[0] = $c->cmd;
+       $c->cmd = "help";
+       print $c->{_commands}->{help}->{code}->($c);
+       exit;
+   }
+
+   if(exists $c->options->{version} and not $c->{_no_program_version} and defined $main::VERSION){
+       print "$0 version: $main::VERSION$/";
+       exit;
+   }
+
+   for(@globals ? @{ $c->{_global_opts} } : @{ $c->{_opt_objs}->{ $c->cmd } }) {
+      my $name_opt = $_->get_name;
+      my $arg = $_->argument;
+      my $send;
+      if(defined $arg){
+         if(ref $arg eq "ARRAY"){
+            $send = [@{$c->argv}[@$arg]];
+         } else {
+            if($arg == -1){
+               $send = join " ", @{$c->argv};
+            } else {
+               $send = $c->argv->[$arg];
+            }
+         }
+      } else {
+         $send = $c->options->{$name_opt};
+      }
+      my $tmp = eval {$_->post_get($send)};
+      if($@){
+         chomp($@);
+         #if($die_on_error) {
+         #   die $@ if $die_on_error eq "die";
+         #   croak $@;
+         #} else {
+            #Carp::carp $@;
+            Carp::croak $@;
+         #}
+      }
+      for my $conflict($_->get_conflicts) {
+         if(defined $tmp){
+             Carp::croak uc$_->get_name, ": ERROR: Conflicts with '$conflict'" if exists $c->options->{$conflict};
+         }
+      }
+      $tmp = $_->get_default unless defined $tmp;
+      $c->options->{$_->get_name} = $tmp if defined $tmp;
+      $c->stash->{$_->to_stash} = $c->options->{$_->get_name} if $_->to_stash and exists $c->options->{$_->get_name};
+   }
+
 }
 
 # stores arguments passed to a
@@ -214,6 +310,7 @@ sub register_commands {
     my $c = shift;
     my %help_for_sub = ();
     my %rules = ();
+    my %options = ();
 
     # process parameters
     foreach my $item (@_) {
@@ -224,8 +321,27 @@ sub register_commands {
                 if ($params eq '-ignore_prefix'
                  or $params eq '-ignore_suffix'
                  or $params eq '-ignore_regexp'
+                 or $params eq '-globals'
+                 or $params eq '-no_command_help'
+                 or $params eq '-no_program_version'
                 ) {
-                    $rules{$params} = $item->{$params};
+                    if($params eq '-globals'){
+                        $options{$params} = $item->{$params};
+                    }
+                    elsif($params eq '-no_command_help'){
+                        $c->{_no_command_help} = $item->{$params};
+                    }
+                    elsif($params eq '-no_program_version' and defined $main::VERSION){
+                        $c->{_no_program_version} = $item->{$params};
+                    }
+                    else {
+                        $rules{$params} = $item->{$params};
+                    }
+                }
+                elsif(ref $item->{$params} eq "HASH"){
+                    $options{$params} = $item->{$params};
+                    $help_for_sub{$params} = $item->{$params}->{help};
+                    $help_for_sub{$params} = delete $options{$params}->{"-help"} if exists $options{$params}->{"-help"};
                 }
                 else {
                     $help_for_sub{$params} = $item->{$params};
@@ -235,6 +351,37 @@ sub register_commands {
         else {
             $help_for_sub{$item} = undef; # no help text
         }
+    }
+    my %opts;
+    if(exists $options{"-globals"} and ref $options{"-globals"} eq "HASH"){
+       for my $global (keys %{ $options{"-globals"} }){
+           if(exists $c->{_global_opts} and not ref $c->{_global_opts} and defined $c->{_global_opts}){
+               push @{ $c->{_global_opts} }, App::Rad::Option->new($global, {help => $options{"-globals"}->{$global}});
+           }
+           else {
+               push @{ $c->{_global_opts} }, App::Rad::Option->new($global, $options{"-globals"}->{$global});
+           }
+           push @{ $c->{_get_opt_global } }, $c->{_global_opts}->[-1]->get_opt_str;
+       }
+    }
+    for my $key(keys %options){
+       next if $key eq "-globals";
+       if(ref $options{"-globals"} eq "HASH"){
+           $opts{$key} = $options{"-globals"};
+       }
+       else{
+           $opts{$key} = {};
+       }
+       for my $opt(keys %{ $options{$key} }){
+           $opts{$key}->{$opt} = $options{$key}->{$opt};
+           if(exists $opts{$key}->{$opt} and not ref $opts{$key}->{$opt} and defined $opts{$key}->{$opt}){
+               push @{ $c->{_opt_objs}->{$key} }, App::Rad::Option->new($opt, {help => $opts{$key}->{$opt}});
+           }
+           else {
+               push @{ $c->{_opt_objs}->{$key} }, App::Rad::Option->new($opt, $opts{$key}->{$opt});
+           }
+           push @{ $c->{_get_opt }->{$key} }, $c->{_opt_objs}->{$key}->[-1]->get_opt_str;
+       }
     }
 
     my %subs = _get_subs_from('main');
@@ -495,6 +642,19 @@ sub post_process {
     }
 }
 
+
+#sub default {
+#   my $c = shift;
+#   my $potential_command = $c->argv->[0];
+#
+#   if ( $c->is_command($potential_command) ) {
+#       #_parse_and_remove_globals($c, $potential_command);
+#       return $c->execute($potential_command);
+#   }
+#   else {
+#       return $c->execute('help');
+#   }
+#}
 
 sub default {
     my $c = shift;

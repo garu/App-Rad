@@ -11,14 +11,51 @@ sub load {
 }
 
 # shows specific help commands
-# TODO: context specific help, 
-# such as "myapp.pl help command"
 sub help {
     my $c = shift;
-    return usage() . "\n\n" . helpstr($c);
+    if($c->cmd eq "help" and $c->argv->[0] and $c->is_command($c->argv->[0])){
+        return command_help($c, $c->argv->[0]) . $/;
+    }
+    else{
+        return usage($c) . "\n\n" . helpstr($c) . global_options($c);
+    }
+}
+
+# shows command-specific help
+# ./myapp help command
+sub command_help {
+   my $c = shift;
+   my $cmd = shift;
+
+   die "No help for this command" unless exists $c->{_opt_objs}->{$cmd};
+   my $global = join " ", map {$_->usage} sort {$a->order <=> $b->order} @{$c->{_global_opts}}
+      if exists $c->{_global_opts};
+   my $usage = join " ", grep {! /^\s*$/} map {$_->usage} sort {$a->order <=> $b->order} @{$c->{_opt_objs}->{$cmd}};
+   my $help  = join $/ , map {$_->help } sort {$a->order <=> $b->order} @{$c->{_opt_objs}->{$cmd}};
+   return "$/Usage: $0 $cmd $usage$/$/$help$/" . global_options($c) unless exists $c->{_global_opts};
+   return "$/Usage: $0 $cmd $global $usage$/$/$help$/" . global_options($c);
+}
+
+
+sub global_options {
+    my $c = shift;
+
+    return "" unless exists $c->{_global_opts} and @{ $c->{_global_opts} };
+
+    my $glob_opt = "$/Global Options:$/";
+
+    my $len = 0;
+    foreach ( @{ $c->{_global_opts} } ) {
+        $len = length($_->get_name) if (length($_->get_name) > $len);
+    }
+    $glob_opt .= join $/ , map { $_->help($len) } sort {$a->order <=> $b->order} @{ $c->{_global_opts} };
+    $/ . $glob_opt . $/
 }
 
 sub usage {
+    my $c = shift;
+    my $global = join " ", map {$_->usage} @{ $c->{_global_opts} } if exists $c->{_global_opts};
+    return "Usage: $0 command $global [arguments]" if $global;
     return "Usage: $0 command [arguments]";
 }
 
