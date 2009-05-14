@@ -15,6 +15,7 @@ our $VERSION = '1.04';
 
 my @OPTIONS = ();
 
+# - "I'm so excited! Feels like I'm 14 again" (edenc on Rad)
 sub _init {
     my $c = shift;
 
@@ -191,9 +192,8 @@ sub _get_input {
     }
 }
 
-# including Options Plugin in core
-# God help me
-
+# - "I gotta get a job that pays me to do this -- it's just too much fun"
+# (SmokeMachine on Rad)
 sub _set_options {
    my $c = shift;
    my @globals = @_;
@@ -305,6 +305,7 @@ sub load_config {
 }
 
 
+# - "Wow! you guys rock!" (zoso on Rad)
 #TODO: this code probably could use some optimization
 sub register_commands {
     my $c = shift;
@@ -496,7 +497,8 @@ sub cmd :lvalue {
     $_[0]->{'cmd'};
 }
 
-
+# - "I'm loving having something else write up the 80% drudge
+#   code for the small things." (benh on Rad)
 sub run {
     my $class = shift;
     my $c = {};
