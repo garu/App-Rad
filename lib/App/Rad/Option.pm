@@ -108,21 +108,21 @@ sub post_get {
    $result = $pre_result if defined $pre_result;
    $self->{result} = $result;
    if(not defined $pre_result){
-      $self->die if $self->required;
+      $self->_die if $self->required;
       return;
    }
    if(exists $self->{separator}){
       $self->{result} = $result = [split $self->{separator}, $result];
    }
    my $post_test = $self->{post_test}->{$self->{type}};
-   $self->die if scalar grep {not m/$post_test/} ref $result eq "ARRAY" ? @$result : $result;
+   $self->_die if scalar grep {not m/$post_test/} ref $result eq "ARRAY" ? @$result : $result;
    if(exists $self->{condition}){
-      $self->die if scalar grep {not $self->{condition}->()} ref $result eq "ARRAY" ? @$result : $result;
+      $self->_die if scalar grep {not $self->{condition}->()} ref $result eq "ARRAY" ? @$result : $result;
    }
    $result;
 }
 
-sub die {
+sub _die {
    my $self = shift;
    die $self->{name}, ": ", $self->{error_message}, $/;
 }
