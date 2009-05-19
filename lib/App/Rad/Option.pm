@@ -55,11 +55,28 @@ sub get_conflicts {
 }
 
 sub get_opt_str {
-   my $self = shift;
-   my $type = $self->{type};
-   $type = "str" if exists $self->{separator};
-   join("|", $self->{name}, @{$self->{aliases}}) . $self->{types}->{$type};
+	my $self = shift;
+	my $type = $self->{type};
+	$type = "str" if exists $self->{separator};
+	if(exists $self->{aliases} and ref $self->{aliases} eq "ARRAY") {
+		return join("|", $self->{name}, @{$self->{aliases}})
+		     . (defined $type 
+		        and exists $self->{types}->{$type}
+				and $self->{types}->{$type} 
+		        ? $self->{types}->{$type} 
+				: ""
+		      );
+	else {
+		return $self->{name}
+		     . (defined $type
+		        and exists $self->{types}->{$type}
+		        and $self->{types}->{$type} 
+		        ? $self->{types}->{$type} 
+		        : ""
+			);
+	}
 }
+
 
 sub order {
    my $self = shift;
