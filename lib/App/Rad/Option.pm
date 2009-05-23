@@ -44,20 +44,21 @@ sub new {
    $self;
 }
 
-sub get_name {
-   my $self = shift;
-   $self->{name};
-}
+sub get_name { return shift->{name} }
 
 sub get_conflicts {
    my $self = shift;
-   @{ $self->{conflicts} }
+   if (exists $self->{conflicts} and ref $self->{conflicts} eq 'ARRAY') {
+	   return @{ $self->{conflicts} };
+   }
+   return;
 }
 
 sub get_opt_str {
 	my $self = shift;
 	my $type = $self->{type};
-	$type = "str" if exists $self->{separator};
+	$type = 'str' if exists $self->{separator};
+
 	if(exists $self->{aliases} and ref $self->{aliases} eq "ARRAY") {
 		return join("|", $self->{name}, @{$self->{aliases}})
 		     . (defined $type 
@@ -89,33 +90,49 @@ sub order {
 }
 
 sub usage {
-   my $self = shift;
+	my $self = shift;
 
-   my $ret;
-   $ret = "--" unless exists $self->{argument};
-   if($self->{type} eq "bool" or $self->{type} eq "counter"){
-      $ret .= $self->{name};
-   } elsif(exists $self->{argument}){
-      if(exists $self->{separator}){
-         $ret = sprintf "%s[%s%s]", uc $self->{name}, $self->{separator}, uc $self->{name};
-      } else {
-         $ret = uc $self->{name};
-      }
-   } else {
-      $ret .= $self->{name} . "=" . uc(exists $self->{type} ? $self->{type} : $self->{name});
-      $ret .= sprintf "[%s%s]", $self->{separator}, uc $self->{type} if exists $self->{separator};
-   }
-   unless($self->required){
-      $ret = sprintf "[%s]", $ret;
-   }
-   $ret;
+	my $ret;
+	$ret = '--' unless exists $self->{argument};
+
+	my $type = $self->{type};
+	if($type and $type eq 'bool' or $type eq 'counter') {
+		$ret .= $self->{name};
+	} 
+	elsif ( exists $self->{argument} ) {
+		if ( exists $self->{separator} ){
+			$ret = sprintf "%s[%s%s]", 
+			               uc $self->{name}, 
+			               $self->{separator}, 
+			               uc $self->{name}
+			;
+		} 
+		else {
+			$ret = uc $self->{name};
+		}
+	} 
+	else {
+		$ret .= $self->{name} . "=" 
+			 . uc(exists $self->{type} ? $self->{type} : $self->{name})
+			 ;
+		if (exists $self->separator) {
+			$ret .= sprintf "[%s%s]", $self->{separator}, uc $self->{type};
+		}
+	}
+	unless ($self->required) {
+		$ret = sprintf "[%s]", $ret;
+	}
+
+	return $ret;
 }
 
 sub help {
-   my $self = shift;
-   my $len  = shift || 20;
+	my $self = shift;
+	my $len  = shift || 20;  # WTF?????
 
-   sprintf "    %-*s\t%s", $len, $self->{name}, $self->{help}
+	sprintf "    %-*s\t%s", $len, $self->{name}, 
+		   exists $self->{help} ? $self->{help} : ''
+	;
 }
 
 sub post_get {
@@ -124,22 +141,25 @@ sub post_get {
    my $result = $self->{default};
    $result = $pre_result if defined $pre_result;
    $self->{result} = $result;
-   if(not defined $pre_result){
-      $self->_die if $self->required;
+
+   if (not defined $pre_result) {
+      $self->error if $self->required;
       return;
    }
-   if(exists $self->{separator}){
-      $self->{result} = $result = [split $self->{separator}, $result];
+   if (exists $self->{separator}) {
+      $self->{result} = $result = [ split $self->{separator}, $result];
    }
    my $post_test = $self->{post_test}->{$self->{type}};
-   $self->_die if scalar grep {not m/$post_test/} ref $result eq "ARRAY" ? @$result : $result;
-   if(exists $self->{condition}){
-      $self->_die if scalar grep {not $self->{condition}->()} ref $result eq "ARRAY" ? @$result : $result;
+   $self->error if scalar grep {not m/$post_test/} ref $result eq "ARRAY" ? @$result : $result;
+
+   if (exists $self->{condition}) {
+      $self->error if scalar grep {not $self->{condition}->()} ref $result eq "ARRAY" ? @$result : $result;
    }
-   $result;
+
+   return $result;
 }
 
-sub _die {
+sub error {
    my $self = shift;
    die $self->{name}, ": ", $self->{error_message}, $/;
 }
