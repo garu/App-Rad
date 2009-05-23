@@ -67,6 +67,7 @@ sub get_opt_str {
 		        ? $self->{types}->{$type} 
 				: ""
 		      );
+	}
 	else {
 		return $self->{name}
 		     . (defined $type
@@ -115,7 +116,7 @@ sub usage {
 		$ret .= $self->{name} . "=" 
 			 . uc(exists $self->{type} ? $self->{type} : $self->{name})
 			 ;
-		if (exists $self->separator) {
+		if (exists $self->{separator}) {
 			$ret .= sprintf "[%s%s]", $self->{separator}, uc $self->{type};
 		}
 	}
