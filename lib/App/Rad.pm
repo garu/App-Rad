@@ -318,34 +318,38 @@ sub register_commands {
         if ( ref ($item) ) {
             Carp::croak '"register_commands" may receive only HASH references'
                 unless ref ($item) eq 'HASH';
-            foreach my $params (keys %{$item}) {
-                if ($params eq '-ignore_prefix'
-                 or $params eq '-ignore_suffix'
-                 or $params eq '-ignore_regexp'
-                 or $params eq '-globals'
-                 or $params eq '-no_command_help'
-                 or $params eq '-no_program_version'
+            foreach my $param (keys %{$item}) {
+
+				# parameter is an option
+                if ($param eq '-ignore_prefix'
+                 or $param eq '-ignore_suffix'
+                 or $param eq '-ignore_regexp'
+                 or $param eq '-globals'
+                 or $param eq '-no_command_help'
+                 or $param eq '-no_program_version'
                 ) {
-                    if($params eq '-globals'){
-                        $options{$params} = $item->{$params};
+                    if($param eq '-globals'){
+                        $options{$param} = $item->{$param}; #TODO: pq tá recebendo???
                     }
-                    elsif($params eq '-no_command_help'){
-                        $c->{_no_command_help} = $item->{$params};
+                    elsif($param eq '-no_command_help'){
+                        $c->{_no_command_help} = $item->{$param}; #TODO: pq tá recebendo???
                     }
-                    elsif($params eq '-no_program_version' and defined $main::VERSION){
-                        $c->{_no_program_version} = $item->{$params};
+                    elsif($param eq '-no_program_version' and defined $main::VERSION){ #TODO: pq "and defined"?
+                        $c->{_no_program_version} = $item->{$param}; #TODO: pq tá recebendo? TODO: comandos "no_*" tipo esse e o acima, se recebem 0 ou 1, costumam confundir (negacao dupla). Nesse caso, acho melhor usar em afirmativo e o padrão ser 0 (falso)
                     }
                     else {
-                        $rules{$params} = $item->{$params};
+                        $rules{$param} = $item->{$param};
                     }
                 }
-                elsif(ref $item->{$params} eq "HASH"){
-                    $options{$params} = $item->{$params};
-                    $help_for_sub{$params} = $item->{$params}->{help};
-                    $help_for_sub{$params} = delete $options{$params}->{"-help"} if exists $options{$params}->{"-help"};
+				# parameter is a complex command (hashref)
+                elsif(ref $item->{$param} eq 'HASH'){
+                    $options{$param} = $item->{$param};
+                    $help_for_sub{$param} = $item->{$param}->{'help'};
+                    $help_for_sub{$param} = delete $options{$param}->{'-help'} if exists $options{$param}->{'-help'}; #TODO: isso parece idiota
                 }
+				# parameter is a simple command (cmd => 'my help')
                 else {
-                    $help_for_sub{$params} = $item->{$params};
+                    $help_for_sub{$param} = $item->{$param};
                 }
             }
         }
