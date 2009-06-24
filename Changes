@@ -2,6 +2,7 @@ Revision history for App-Rad
 
 1.05	2009/05/
 		* Added examples
+		Added initial Shell-like behavior support via 'App::Rad->shell'
 
 1.04	2009/05/04
 
