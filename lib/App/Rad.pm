@@ -204,7 +204,7 @@ sub _set_options {
    }
    else {
       push @opts, @{ $c->{_get_opt_global} } if exists $c->{_get_opt_global};
-      push @opts, "version" unless $c->{_no_program_version} or not defined $main::VERSION;
+      push @opts, "version" unless $c->{_no_version} or not defined $main::VERSION;
    }
 
    $c->getopt(@opts) || Carp::croak;
@@ -216,7 +216,7 @@ sub _set_options {
        exit;
    }
 
-   if(exists $c->options->{version} and not $c->{_no_program_version} and defined $main::VERSION){
+   if(exists $c->options->{version} and not $c->{_no_version} and defined $main::VERSION){
        print "$0 version: $main::VERSION$/";
        exit;
    }
@@ -318,6 +318,7 @@ sub register_commands {
         if ( ref ($item) ) {
             Carp::croak '"register_commands" may receive only HASH references'
                 unless ref ($item) eq 'HASH';
+
             foreach my $param (keys %{$item}) {
 
 				# parameter is an option
@@ -326,7 +327,7 @@ sub register_commands {
                  or $param eq '-ignore_regexp'
                  or $param eq '-globals'
                  or $param eq '-no_command_help'
-                 or $param eq '-no_program_version'
+                 or $param eq '-no_version'
                 ) {
                     if($param eq '-globals'){
                         $options{$param} = $item->{$param}; #TODO: pq tá recebendo???
@@ -334,8 +335,8 @@ sub register_commands {
                     elsif($param eq '-no_command_help'){
                         $c->{_no_command_help} = $item->{$param}; #TODO: pq tá recebendo???
                     }
-                    elsif($param eq '-no_program_version' and defined $main::VERSION){ #TODO: pq "and defined"?
-                        $c->{_no_program_version} = $item->{$param}; #TODO: pq tá recebendo? TODO: comandos "no_*" tipo esse e o acima, se recebem 0 ou 1, costumam confundir (negacao dupla). Nesse caso, acho melhor usar em afirmativo e o padrão ser 0 (falso)
+                    elsif($param eq '-no_version' and defined $main::VERSION){ #TODO: pq "and defined"?
+                        $c->{_no_version} = $item->{$param}; #TODO: pq tá recebendo? TODO: comandos "no_*" tipo esse e o acima, se recebem 0 ou 1, costumam confundir (negacao dupla). Nesse caso, acho melhor usar em afirmativo e o padrão ser 0 (falso)
                     }
                     else {
                         $rules{$param} = $item->{$param};
@@ -345,7 +346,7 @@ sub register_commands {
                 elsif(ref $item->{$param} eq 'HASH'){
                     $options{$param} = $item->{$param};
                     $help_for_sub{$param} = $item->{$param}->{'help'};
-                    $help_for_sub{$param} = delete $options{$param}->{'-help'} if exists $options{$param}->{'-help'}; #TODO: isso parece idiota
+                    $help_for_sub{$param} = delete $options{$param}->{'-help'} if exists $options{$param}->{'-help'}; #TODO: isso parece idiota e com bugs (e se o usuario definiu o help dele em '-help' em vez de em 'help'? e se 'help' não está definido, gera warning? TODO: existe propósito nisso? afinal, estamos tratando um comando apenas com help! Ou isso não é um comando?
                 }
 				# parameter is a simple command (cmd => 'my help')
                 else {
@@ -353,10 +354,13 @@ sub register_commands {
                 }
             }
         }
-        else {
+        else { # item is not a hashref, but a single element, treated in this case as a command. TODO: should we enable definition of single-token options (do we *have* those? I'm thinking -globals and friends...
             $help_for_sub{$item} = undef; # no help text
         }
     }
+
+	# now we have all options and explicit commands set, let's
+	# do some automatic fetching
     my %opts;
     if(exists $options{"-globals"} and ref $options{"-globals"} eq "HASH"){
        for my $global (keys %{ $options{"-globals"} }){
@@ -1241,6 +1245,13 @@ You can even bundle the hash reference to include your C<< cmd => help >> and sp
         }
     );
 
+=head2 Advaced Registering:
+
+App::Rad tries to be flexible and powerful enough so you can have 
+
+=head3 Registering options
+
+=
 
 =head2 $c->unregister_command ( I<NAME> )
 
