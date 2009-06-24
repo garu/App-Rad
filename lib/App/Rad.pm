@@ -89,9 +89,6 @@ sub load_plugin {
         if $@;
     my %methods = _get_subs_from($plugin_fullname);
 
-    Carp::croak "No methods found for plugin '$plugin_fullname'\n"
-		unless keys %methods > 0;
-
 	no strict 'refs';
 	foreach my $method (keys %methods) {
         # don't add plugin's internal methods
