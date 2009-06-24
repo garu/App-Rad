@@ -308,10 +308,10 @@ sub load_config {
 # - "Wow! you guys rock!" (zoso on Rad)
 #TODO: this code probably could use some optimization
 sub register_commands {
-    my $c = shift;
+    my $c            = shift;
     my %help_for_sub = ();
-    my %rules = ();
-    my %options = ();
+    my %rules        = ();
+    my %options      = ();
 
     # process parameters
     foreach my $item (@_) {
@@ -537,10 +537,11 @@ sub run {
 
 # run operations 
 # in a shell-like environment
-#sub shell {
-#    my $class = shift;
-#    App::Rad::Shell::shell($class);
-#}
+sub shell {
+    my $class = shift;
+	require App::Rad::Shell;
+    App::Rad::Shell::shell($class);
+}
 
 sub execute {
     my ($c, $cmd) = @_;
