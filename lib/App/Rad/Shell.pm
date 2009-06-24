@@ -6,10 +6,6 @@ use warnings;
 
 our $VERSION = '0.01';
 
-sub load {
-    my ($self, $c) = @_;
-    $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands');
-}
 
 #    App::Rad->shell( {
 #        prompt     => 'cmd: ',
@@ -47,10 +43,12 @@ sub shell {
 
 	# dirty hack to override 'default' function
 	$c->{'_functions'}->{'default'} = sub {};
+	$c->{'_functions'}->{'invalid'} = sub { return "Invalid command. Type 'help' for a list of commands" };
 
     # this is *before* setup() because the application
     # developer might want to modify the command.
     $c->register('quit', \&quit, 'exits the shell');
+    $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands');
 
     
     # then we run the setup to register
