@@ -447,8 +447,30 @@ sub register_commands {
             }
         }
     }
+	# ***higly*** experimental
+	$c->_register_paths();
 }
 
+sub _register_paths {
+	my $c = shift;
+	my $name = ref($c);
+	return unless $name ne 'App::Rad';
+	# TODO: this is not only overkill, but might be plain wrong
+	use Module::Pluggable::Object;
+   	my $finder = Module::Pluggable::Object->new(
+							search_path => $name, 
+			); 	
+	foreach my $cmd ($finder->plugins) {
+		eval "use $cmd";
+		next if $@;
+		next unless $cmd->can('run');
+
+		my $cmd_name = lc $cmd;
+		$cmd_name =~ s/(?:.+)\:\://;
+		my $ref = sub { $cmd::run };
+		$c->register($cmd_name, \&$ref );
+	}
+}
 
 sub register_command { return register(@_) }
 sub register {
