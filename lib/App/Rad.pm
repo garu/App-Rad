@@ -512,7 +512,8 @@ sub commands {
 
 
 sub is_command {
-    my ($c, $cmd) = @_;
+    my $c   = shift;
+    my $cmd = shift;
     return (defined $c->{'_commands'}->{$cmd}
             ? 1
             : 0
