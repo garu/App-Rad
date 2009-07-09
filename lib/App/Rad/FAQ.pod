@@ -17,7 +17,7 @@ B<Long answer:> As you may know, Rad stores returned values from commands on C<<
 Since this is Rad's standard post_process, an easier (and perhaps more elegant) way of acomplishing the same result is simply calling C<< $c->post_process >> on the last line of your routine, like so:
 
    sub post_process {
-	   my $c = shift;
+       my $c = shift;
 
        ...  # do your own processing
 
@@ -30,11 +30,11 @@ Naturally, Rad's automatic help mechanism also forwards its output to post_proce
       my $c = shift;
 
       if ($c->cmd eq 'help') {
-	      print $c->output . "\n";
+          print $c->output . "\n";
       }
       else {
-		  # manipulate output at will
-	  }
+          # manipulate output at will
+      }
   }
 
 You can also catch commandless calls to your program doing C<< if (!$c->cmd) >> and easily combine it with the example above.
