@@ -1,0 +1,20 @@
+=head1 NAME
+
+App::Rad::FAQ - Frequently Asked Questions about Rad
+
+=head1 FREQUENTLY ASKED QUESTIONS
+
+=head2 I added a post_process and now my app does not show any help messages. What's wrong?
+
+As you may know, Rad stores returned values from commands on C<< $c->output >>, and leaves all output treatment to post_process. This enables you to manipulate the output of your commands as you see fit (such as mailing them, adding them to a database, parsing it into a specific format, etc). If you override post_process, you need to remember to actually print the output afterwards. This can easily be acomplished with:
+
+   print $c->output . "\n";
+
+Naturally, Rad's automatic help mechanism also forwards its output to post_process (so you can also manipulate it at will before printing). If you wish to selectively print C<< $c->output >> only if the command was 'help', you can do just that:
+
+  if ($c->cmd eq 'help') {
+	  print $c->output . "\n";
+  }
+
+
+
