@@ -89,12 +89,13 @@ sub load_plugin {
         if $@;
     my %methods = _get_subs_from($plugin_fullname);
 
-	no strict 'refs';
 	foreach my $method (keys %methods) {
         # don't add plugin's internal methods
         next if substr ($method, 0, 1) eq '_';
-
-		*{"$class\::$method"} = $methods{$method};
+		{
+			no strict 'refs';
+			*{"$class\::$method"} = $methods{$method};
+		}
 		$c->debug("-- method '$method' added [$plugin_fullname]");
 
         # fill $c->plugins()
