@@ -58,6 +58,9 @@ sub usage {
     if ($c->{_global_options}) {
 		$global = join ' ', map {$_->usage} @{ $c->{_global_options} };
 	}
+	if (${main::VERSION}) {
+		print "$0 version " . ${main::VERSION} . "\n";
+	}
     return "Usage: $0 command $global [arguments]";
 }
 
