@@ -168,7 +168,7 @@ sub _get_input {
             push @globals, $val;
         }
     }
-    if((@globals or not defined $cmd) and exists $c->{_global_opts}){
+    if((@globals or not defined $cmd) and exists $c->{_global_options}){
         @ARGV = @globals;
         $c->_set_options(@globals ? @globals : 1);
     }
@@ -219,7 +219,7 @@ sub _set_options {
        exit;
    }
 
-   for(@globals ? @{ $c->{_global_opts} } : @{ $c->{_opt_objs}->{ $c->cmd } }) {
+   for(@globals ? @{ $c->{_global_options} } : @{ $c->{_opt_objs}->{ $c->cmd } }) {
       my $name_opt = $_->get_name;
       my $arg = $_->argument;
       my $send;
@@ -362,13 +362,13 @@ sub register_commands {
     my %opts;
     if(exists $options{"-globals"} and ref $options{"-globals"} eq "HASH"){
        for my $global (keys %{ $options{"-globals"} }){
-           if(exists $c->{_global_opts} and not ref $c->{_global_opts} and defined $c->{_global_opts}){
-               push @{ $c->{_global_opts} }, App::Rad::Option->new($global, {help => $options{"-globals"}->{$global}});
+           if(exists $c->{_global_options} and not ref $c->{_global_options} and defined $c->{_global_options}){
+               push @{ $c->{_global_options} }, App::Rad::Option->new($global, {help => $options{"-globals"}->{$global}});
            }
            else {
-               push @{ $c->{_global_opts} }, App::Rad::Option->new($global, $options{"-globals"}->{$global});
+               push @{ $c->{_global_options} }, App::Rad::Option->new($global, $options{"-globals"}->{$global});
            }
-           push @{ $c->{_get_opt_global } }, $c->{_global_opts}->[-1]->get_opt_str;
+           push @{ $c->{_get_opt_global } }, $c->{_global_options}->[-1]->get_opt_str;
        }
     }
     for my $key(keys %options){

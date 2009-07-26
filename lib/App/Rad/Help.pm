@@ -28,11 +28,11 @@ sub command_help {
    my $cmd = shift;
 
    die "No help for this command" unless exists $c->{_opt_objs}->{$cmd};
-   my $global = join " ", map {$_->usage} sort {$a->order <=> $b->order} @{$c->{_global_opts}}
-      if exists $c->{_global_opts};
+   my $global = join " ", map {$_->usage} sort {$a->order <=> $b->order} @{$c->{_global_options}}
+      if exists $c->{_global_options};
    my $usage = join " ", grep {! /^\s*$/} map {$_->usage} sort {$a->order <=> $b->order} @{$c->{_opt_objs}->{$cmd}};
    my $help  = join $/ , map {$_->help } sort {$a->order <=> $b->order} @{$c->{_opt_objs}->{$cmd}};
-   return "$/Usage: $0 $cmd $usage$/$/$help$/" . global_options($c) unless exists $c->{_global_opts};
+   return "$/Usage: $0 $cmd $usage$/$/$help$/" . global_options($c) unless exists $c->{_global_options};
    return "$/Usage: $0 $cmd $global $usage$/$/$help$/" . global_options($c);
 }
 
@@ -40,23 +40,25 @@ sub command_help {
 sub global_options {
     my $c = shift;
 
-    return "" unless exists $c->{_global_opts} and @{ $c->{_global_opts} };
+    return "" unless exists $c->{_global_options} and @{ $c->{_global_options} };
 
     my $glob_opt = "$/Global Options:$/";
 
     my $len = 0;
-    foreach ( @{ $c->{_global_opts} } ) {
+    foreach ( @{ $c->{_global_options} } ) {
         $len = length($_->get_name) if (length($_->get_name) > $len);
     }
-    $glob_opt .= join $/ , map { $_->help($len) } sort {$a->order <=> $b->order} @{ $c->{_global_opts} };
+    $glob_opt .= join $/ , map { $_->help($len) } sort {$a->order <=> $b->order} @{ $c->{_global_options} };
     $/ . $glob_opt . $/
 }
 
 sub usage {
     my $c = shift;
-    my $global = join " ", map {$_->usage} @{ $c->{_global_opts} } if exists $c->{_global_opts};
-    return "Usage: $0 command $global [arguments]" if $global;
-    return "Usage: $0 command [arguments]";
+    my $global = '';
+    if ($c->{_global_options}) {
+		$global = join ' ', map {$_->usage} @{ $c->{_global_options} };
+	}
+    return "Usage: $0 command $global [arguments]";
 }
 
 sub helpstr {
