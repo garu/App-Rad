@@ -8,6 +8,17 @@ our @EXPORT = 'test_app';
 sub test_app {
 	my ($app, @args) = (@_);
 
+	# we may receive a filehandle reference
+	# such as a GLOB or IO::Handle.
+	if (ref $app) {
+		eval {
+			local $/ = undef;
+			my $content = ref $app ? <$app> : $app;
+			$app = $content;
+		};
+		return if $@;
+	}
+	
 	# if user gave us a filename, we use it.
 	# otherwise we assume $app to be a string
 	# containing code and run it in a temp file.
