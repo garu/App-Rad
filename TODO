@@ -1,7 +1,31 @@
-Commands!
-Shell!
+core:
+=====
 
-plugins!
+    - support for packages as commands
+    - better ways to test
+    - tests for new features (options)
+    - more examples in /examples
+    - improving shell and abbrev plugin
 
-um de Authentication e outro de Authorization (ou basta um?)
-um pro Getopt::Euclid ? (não sei se dá / se vale a pena)
+
+plugins:
+========
+
+    - App::Rad::Plugin::Log4perl  (work in progress by mvitor)
+    - App::Rad::Plugin::Menu  (work in progress by gabriel vieira)
+    - App::Rad::Plugin::Daemon (?) something to easily daemonize, get pids, ...?
+    - App::Rad::Plugin::Autoconf  (register "x" option and get "--with-x", "--no-x", etc, just like autoconf)
+
+    - a plugin to create getters/setters as commands?
+
+    - maybe also something for...
+        Authentication/Authorization
+        Localization/Internationalization
+
+
+other:
+======
+
+    - maybe there's a way to recongnize a program as an App::Rad program and let users autocomplete on *nix via /etc/bash_completion (could be worth investigating)
+
+
