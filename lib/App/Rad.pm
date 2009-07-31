@@ -1,7 +1,6 @@
 package App::Rad;
 use 5.006;
 use App::Rad::Help;
-use App::Rad::Option;
 use Carp                ();
 use warnings;
 use strict;
@@ -15,7 +14,6 @@ our $VERSION = '1.04';
 
 my @OPTIONS = ();
 
-# - "I'm so excited! Feels like I'm 14 again" (edenc on Rad)
 sub _init {
     my $c = shift;
 
@@ -89,13 +87,15 @@ sub load_plugin {
         if $@;
     my %methods = _get_subs_from($plugin_fullname);
 
+    Carp::croak "No methods found for plugin '$plugin_fullname'\n"
+		unless keys %methods > 0;
+
+	no strict 'refs';
 	foreach my $method (keys %methods) {
         # don't add plugin's internal methods
         next if substr ($method, 0, 1) eq '_';
-		{
-			no strict 'refs';
-			*{"$class\::$method"} = $methods{$method};
-		}
+
+		*{"$class\::$method"} = $methods{$method};
 		$c->debug("-- method '$method' added [$plugin_fullname]");
 
         # fill $c->plugins()
@@ -122,7 +122,7 @@ sub _get_subs_from {
     while (my ($key, $value) = ( each %{*{$package}} )) {
         local (*SYMBOL) = $value;
         if ( defined $value && defined *SYMBOL{CODE} ) {
-            $subs{$key} = $value;
+            $subs{$key} = *{$value}{CODE};
         }
     }
     return %subs;
@@ -151,112 +151,18 @@ sub _register_functions {
 sub _get_input {
     my $c = shift;
 
-    #my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
-    #        ? shift @ARGV
-    #        : ''
-    #        ;
-    #my @argv = @ARGV;
-
-    my $cmd;
-    my @globals;
-    while(my $val = shift @ARGV) {
-        if(substr($val, 0, 1) ne '-') {
-            $cmd = $val;
-            last;
-        }
-        eval {
-            push @globals, $val;
-        }
-    }
-    if((@globals or not defined $cmd) and exists $c->{_global_options}){
-        @ARGV = @globals;
-        $c->_set_options(@globals ? @globals : 1);
-    }
-	else {
-		@ARGV = (@globals, @ARGV);
-	}
+    my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
+            ? shift @ARGV
+            : ''
+            ;
 
     @{$c->argv} = @ARGV;
-    $c->{'cmd'} = $cmd || '';
+    $c->{'cmd'} = $cmd;
 
     $c->debug('received command: ' . $c->{'cmd'});
     $c->debug('received parameters: ' . join (' ', @{$c->argv} ));
 
-    if($c->cmd and exists $c->{_get_opt}->{ $c->cmd }){
-        $c->_set_options();
-    }
-    else {
-        $c->_tinygetopt();
-    }
-}
-
-# - "I gotta get a job that pays me to do this -- it's just too much fun"
-# (SmokeMachine on Rad)
-sub _set_options {
-   my $c = shift;
-   my @globals = @_;
-   my @opts;
-   push @opts, "help" unless $c->{_no_command_help};
-   unless(@globals){
-      push @opts, @{ $c->{_get_opt}->{ $c->cmd } };
-   }
-   else {
-      push @opts, @{ $c->{_get_opt_global} } if exists $c->{_get_opt_global};
-      push @opts, "version" unless $c->{_no_version} or not defined $main::VERSION;
-   }
-
-   $c->getopt(@opts) || Carp::croak;
-
-   if(not @globals and exists $c->options->{help} and not $c->{_no_command_help}){
-       $c->argv->[0] = $c->cmd;
-       $c->cmd = "help";
-       print $c->{_commands}->{help}->{code}->($c);
-       exit;
-   }
-
-   if(exists $c->options->{version} and not $c->{_no_version} and defined $main::VERSION){
-       print "$0 version: $main::VERSION$/";
-       exit;
-   }
-
-   for(@globals ? @{ $c->{_global_options} } : @{ $c->{_opt_objs}->{ $c->cmd } }) {
-      my $name_opt = $_->get_name;
-      my $arg = $_->argument;
-      my $send;
-      if(defined $arg){
-         if(ref $arg eq "ARRAY"){
-            $send = [@{$c->argv}[@$arg]];
-         } else {
-            if($arg == -1){
-               $send = join " ", @{$c->argv};
-            } else {
-               $send = $c->argv->[$arg];
-            }
-         }
-      } else {
-         $send = $c->options->{$name_opt};
-      }
-      my $tmp = eval {$_->post_get($send)};
-      if($@){
-         chomp($@);
-         #if($die_on_error) {
-         #   die $@ if $die_on_error eq "die";
-         #   croak $@;
-         #} else {
-            #Carp::carp $@;
-            Carp::croak $@;
-         #}
-      }
-      for my $conflict($_->get_conflicts) {
-         if(defined $tmp){
-             Carp::croak uc$_->get_name, ": ERROR: Conflicts with '$conflict'" if exists $c->options->{$conflict};
-         }
-      }
-      $tmp = $_->get_default unless defined $tmp;
-      $c->options->{$_->get_name} = $tmp if defined $tmp;
-      $c->stash->{$_->to_stash} = $c->options->{$_->get_name} if $_->to_stash and exists $c->options->{$_->get_name};
-   }
-
+    $c->_tinygetopt();
 }
 
 # stores arguments passed to a
@@ -303,110 +209,67 @@ sub load_config {
 }
 
 
-# - "Wow! you guys rock!" (zoso on Rad)
 #TODO: this code probably could use some optimization
 sub register_commands {
-    my $c            = shift;
+    my $c = shift;
     my %help_for_sub = ();
-    my %rules        = ();
-    my %options      = ();
+    my %rules = ();
 
     # process parameters
     foreach my $item (@_) {
+    	
+    	# if we receive a hash ref, it could be commands or
+    	# rules for fetching commands.
         if ( ref ($item) ) {
             Carp::croak '"register_commands" may receive only HASH references'
-                unless ref ($item) eq 'HASH';
+                unless ref $item eq 'HASH';
 
-            foreach my $param (keys %{$item}) {
-
-				# parameter is an option
-                if ($param eq '-ignore_prefix'
-                 or $param eq '-ignore_suffix'
-                 or $param eq '-ignore_regexp'
-                 or $param eq '-globals'
-                 or $param eq '-no_command_help'
-                 or $param eq '-no_version'
+            foreach my $params (keys %{$item}) {
+            	Carp::croak 'registered elements may only receive strings or hash references'
+						if ref $item->{$params} and ref $item->{$params} ne 'HASH';
+            	
+            	# we got a rule - push it in.
+                if ($params eq '-ignore_prefix'
+                 or $params eq '-ignore_suffix'
+                 or $params eq '-ignore_regexp'
                 ) {
-                    if($param eq '-globals'){
-                        $options{$param} = $item->{$param}; #TODO: pq tá recebendo???
-                    }
-                    elsif($param eq '-no_command_help'){
-                        $c->{_no_command_help} = $item->{$param}; #TODO: pq tá recebendo???
-                    }
-                    elsif($param eq '-no_version' and defined $main::VERSION){ #TODO: pq "and defined"?
-                        $c->{_no_version} = $item->{$param}; #TODO: pq tá recebendo? TODO: comandos "no_*" tipo esse e o acima, se recebem 0 ou 1, costumam confundir (negacao dupla). Nesse caso, acho melhor usar em afirmativo e o padrão ser 0 (falso)
-                    }
-                    else {
-                        $rules{$param} = $item->{$param};
-                    }
+                    $rules{$params} = $item->{$params};
                 }
-				# parameter is a complex command (hashref)
-                elsif(ref $item->{$param} eq 'HASH'){
-                    $options{$param} = $item->{$param};
-                    $help_for_sub{$param} = $item->{$param}->{'help'};
-                    $help_for_sub{$param} = delete $options{$param}->{'-help'} if exists $options{$param}->{'-help'}; #TODO: isso parece idiota e com bugs (e se o usuario definiu o help dele em '-help' em vez de em 'help'? e se 'help' não está definido, gera warning? TODO: existe propósito nisso? afinal, estamos tratando um comando apenas com help! Ou isso não é um comando?
-                }
-				# parameter is a simple command (cmd => 'my help')
+                # not a rule, so it's either a command with
+                # help text or a command with an argument list.
+                # either way, we push it to our 'help' hash.
                 else {
-                    $help_for_sub{$param} = $item->{$param};
+					$help_for_sub{$params} = $item->{$params};
                 }
             }
         }
-        else { # item is not a hashref, but a single element, treated in this case as a command. TODO: should we enable definition of single-token options (do we *have* those? I'm thinking -globals and friends...
+        else {
             $help_for_sub{$item} = undef; # no help text
         }
     }
 
-	# now we have all options and explicit commands set, let's
-	# do some automatic fetching
-    my %opts;
-    if(exists $options{"-globals"} and ref $options{"-globals"} eq "HASH"){
-       for my $global (keys %{ $options{"-globals"} }){
-           if(exists $c->{_global_options} and not ref $c->{_global_options} and defined $c->{_global_options}){
-               push @{ $c->{_global_options} }, App::Rad::Option->new($global, {help => $options{"-globals"}->{$global}});
-           }
-           else {
-               push @{ $c->{_global_options} }, App::Rad::Option->new($global, $options{"-globals"}->{$global});
-           }
-           push @{ $c->{_get_opt_global } }, $c->{_global_options}->[-1]->get_opt_str;
-       }
-    }
-    for my $key(keys %options){
-       next if $key eq "-globals";
-       if(ref $options{"-globals"} eq "HASH"){
-           $opts{$key} = $options{"-globals"};
-       }
-       else{
-           $opts{$key} = {};
-       }
-       for my $opt(keys %{ $options{$key} }){
-           $opts{$key}->{$opt} = $options{$key}->{$opt};
-           if(exists $opts{$key}->{$opt} and not ref $opts{$key}->{$opt} and defined $opts{$key}->{$opt}){
-               push @{ $c->{_opt_objs}->{$key} }, App::Rad::Option->new($opt, {help => $opts{$key}->{$opt}});
-           }
-           else {
-               push @{ $c->{_opt_objs}->{$key} }, App::Rad::Option->new($opt, $opts{$key}->{$opt});
-           }
-           push @{ $c->{_get_opt }->{$key} }, $c->{_opt_objs}->{$key}->[-1]->get_opt_str;
-       }
-    }
+	my $caller = (caller(2) or 'main');
+    my %subs = _get_subs_from($caller);
 
-    my %subs = _get_subs_from('main');
-
-    foreach (keys %help_for_sub) {
+	# handles explicit command calls first, as
+	# they have priority over generic rules (below)
+    foreach my $cmd (keys %help_for_sub) {
 
         # we only add the sub to the commands
         # list if it's *not* a control function
-        if ( not defined $c->{'_functions'}->{$_} ) {
+        if ( not defined $c->{'_functions'}->{$cmd} ) {
 
-            # user want to register a valid (existant) sub
-            if ( exists $subs{$_} ) {
-                $c->debug("registering $_ as a command.");
-                $c->{'_commands'}->{$_}->{'code'} = $subs{$_};
-                App::Rad::Help->register_help($c, $_, $help_for_sub{$_});
+			if ($cmd eq '-global') {
+				# use may set it as a flag to enable global arguments
+				# or elaborate on each available argument
+				$c->register(undef, undef, $help_for_sub{$cmd});
+			}
+            # user wants to register a valid (existant) sub
+            elsif ( exists $subs{$cmd} ) {
+                $c->register($cmd, $subs{$cmd}, $help_for_sub{$cmd});
             }
             else {
-                Carp::croak "'$_' does not appear to be a valid sub. Registering seems impossible.\n";
+                Carp::croak "'$cmd' does not appear to be a valid sub. Registering seems impossible.\n";
             }
         }
     }
@@ -445,37 +308,42 @@ sub register_commands {
             }
         }
     }
-	# ***higly*** experimental
-	$c->_register_paths();
 }
 
-sub _register_paths {
-	my $c = shift;
-	my $name = ref($c);
-	return unless $name ne 'App::Rad';
-	# TODO: this is not only overkill, but might be plain wrong
-	use Module::Pluggable::Object;
-   	my $finder = Module::Pluggable::Object->new(
-							search_path => $name, 
-			); 	
-	foreach my $cmd ($finder->plugins) {
-		eval "use $cmd";
-		next if $@;
-		next unless $cmd->can('run');
-
-		my $cmd_name = lc $cmd;
-		$cmd_name =~ s/(?:.+)\:\://;
-		my $ref = sub { $cmd::run };
-		$c->register($cmd_name, \&$ref );
-	}
-}
-
+#TODO: add arguments ***********************************************
+#$c->register_commands( {
+#              command1 => {
+#                             "length" => {
+#                                     type => "num",
+#                                     condition => sub { $_ > 0 },
+#                                     aliases   => [ 'len', 'l' ],
+#                                     to_stash => 'mylength',
+#                                     required  => 1,
+#                                     help       => 'help for the
+#--length argument of command1',
+#                                     error_message => 'this will be
+#printed if "condition" returns false',
+#                             }
+#                             "foo" => 'other arguments can still just
+#have simple help',
+#                             "bar" => {
+#                                     conflicts_with => 'foo',
+#                             },
+#                             "baz" => {
+#                                     default => 42,
+#                             },
+#              },
+#              command2 => {
+#                             ....
+#              },
+#});
+#
 sub register_command { return register(@_) }
 sub register {
     my ($c, $command_name, $coderef, $helptext) = @_;
     $c->debug("got: " . ref $coderef);
-    return undef
-        unless ( (ref $coderef) eq 'CODE' );
+
+    return unless ref $coderef eq 'CODE';
 
     $c->debug("registering $command_name as a command.");
     $c->{'_commands'}->{$command_name}->{'code'} = $coderef;
@@ -513,8 +381,7 @@ sub commands {
 
 
 sub is_command {
-    my $c   = shift;
-    my $cmd = shift;
+    my ($c, $cmd) = @_;
     return (defined $c->{'_commands'}->{$cmd}
             ? 1
             : 0
@@ -526,8 +393,7 @@ sub cmd :lvalue {
     $_[0]->{'cmd'};
 }
 
-# - "I'm loving having something else write up the 80% drudge
-#   code for the small things." (benh on Rad)
+
 sub run {
     my $class = shift;
     my $c = {};
@@ -558,11 +424,10 @@ sub run {
 
 # run operations 
 # in a shell-like environment
-sub shell {
-    my $class = shift;
-	require App::Rad::Shell;
-    App::Rad::Shell::shell($class);
-}
+#sub shell {
+#    my $class = shift;
+#    App::Rad::Shell::shell($class);
+#}
 
 sub execute {
     my ($c, $cmd) = @_;
@@ -674,19 +539,6 @@ sub post_process {
     }
 }
 
-
-#sub default {
-#   my $c = shift;
-#   my $potential_command = $c->argv->[0];
-#
-#   if ( $c->is_command($potential_command) ) {
-#       #_parse_and_remove_globals($c, $potential_command);
-#       return $c->execute($potential_command);
-#   }
-#   else {
-#       return $c->execute('help');
-#   }
-#}
 
 sub default {
     my $c = shift;
@@ -1267,13 +1119,6 @@ You can even bundle the hash reference to include your C<< cmd => help >> and sp
         }
     );
 
-=head2 Advaced Registering:
-
-App::Rad tries to be flexible and powerful enough so you can have 
-
-=head3 Registering options
-
-=
 
 =head2 $c->unregister_command ( I<NAME> )
 
@@ -1514,15 +1359,9 @@ Breno G. de Oliveira, C<< <garu at cpan.org> >>
 
 Ben Hengst
 
-Eden Cardim
-
-Esteban Manchado
-
 Fernando Correa
 
 Flavio Glock
-
-Gabriel Vieira
 
 Thanks to everyone for contributing! Please let me know if I've skipped your name by accident.
 
