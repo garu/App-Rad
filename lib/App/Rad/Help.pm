@@ -112,21 +112,30 @@ This is an internal module for App::Rad and should not be used separately (unles
 
 =head1 INTERNAL METHODS
 
-=head2 load
+=head2 Methods you might want to override:
 
-Loads the module into App::Rad
-
-=head2 help
-
-Show help text
-
-=head2 usage
+=head3 usage
 
 Prints usage string. Default is "Usage: $0 command [arguments]", where $0 is your program's name.
 
-=head2 helpstr
+=head3 helpstr
 
 Prints a help string with all available commands and their help description.
+
+=head3 help
+
+Show full help text (usage + helpstr)
+
+
+=head2 Methods you really don't need to worry about
+
+=head3 load
+
+Loads the module into App::Rad
+
+=head3 get_help_attr_for
+
+given a command name, returns it's help string (if one was set with the :Help() attribute)
 
 =head1 DEPENDENCIES
 
