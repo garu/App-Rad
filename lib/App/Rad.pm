@@ -18,7 +18,7 @@ sub _init {
     my $c = shift;
 
     # instantiate references for the first time
-    $c->{'_ARGV'    } = [];
+    $c->{'_ARGV'   } = [];
     $c->{'_options'} = {};
     $c->{'_stash'  } = {};
     $c->{'_config' } = {};
@@ -51,9 +51,9 @@ sub _init {
             $c->{'debug'} = 1;
         }
         else {
-        	$c->load_plugin($_);
+            $c->load_plugin($_);
         }
-	}
+    }
 	
     # tiny cheat to avoid doing a lot of processing
     # when not in debug mode. If needed, I'll create
