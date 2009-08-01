@@ -304,8 +304,6 @@ sub register_commands {
                 # avoid duplicate registration
                 if ( !exists $help_for_sub{$subname} ) {
                     $c->register($subname, $subs{$subname});
-                    #$c->{'_commands'}->{$subname}->{'code'} = $subs{$subname};
-                    #App::Rad::Help->register_help($c, $subname, undef);
                 }
             }
         }
@@ -340,8 +338,6 @@ sub register {
     $c->debug("registering $command_name as a command.");
     
     $c->{'_commands'}->{$command_name} = $cmd_obj;
-    #$c->{'_commands'}->{$command_name}->{'code'} = $coderef;
-    #App::Rad::Help->register_help($c, $command_name, $helptext);
     return $command_name;
 }
 
@@ -441,7 +437,6 @@ sub execute {
 
     # valid command, run it
     if ($c->is_command($c->{'cmd'}) ) {
-        #$c->{'output'} = $c->{'_commands'}->{$cmd}->{'code'}->($c);
         $c->{'output'} = $c->{'_commands'}->{$cmd}->run($c);
     }
     # no command, run default()
