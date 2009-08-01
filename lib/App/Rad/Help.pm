@@ -11,57 +11,15 @@ sub load {
 }
 
 # shows specific help commands
+# TODO: context specific help, 
+# such as "myapp.pl help command"
 sub help {
     my $c = shift;
-    if($c->cmd eq "help" and $c->argv->[0] and $c->is_command($c->argv->[0])){
-        return command_help($c, $c->argv->[0]) . $/;
-    }
-    else{
-        return usage($c) . "\n\n" . helpstr($c) . global_options($c);
-    }
-}
-
-# shows command-specific help
-# ./myapp help command
-sub command_help {
-   my $c = shift;
-   my $cmd = shift;
-
-   die "No help for this command" unless exists $c->{_opt_objs}->{$cmd};
-   my $global = join " ", map {$_->usage} sort {$a->order <=> $b->order} @{$c->{_global_options}}
-      if exists $c->{_global_options};
-   my $usage = join " ", grep {! /^\s*$/} map {$_->usage} sort {$a->order <=> $b->order} @{$c->{_opt_objs}->{$cmd}};
-   my $help  = join $/ , map {$_->help } sort {$a->order <=> $b->order} @{$c->{_opt_objs}->{$cmd}};
-   return "$/Usage: $0 $cmd $usage$/$/$help$/" . global_options($c) unless exists $c->{_global_options};
-   return "$/Usage: $0 $cmd $global $usage$/$/$help$/" . global_options($c);
-}
-
-
-sub global_options {
-    my $c = shift;
-
-    return "" unless exists $c->{_global_options} and @{ $c->{_global_options} };
-
-    my $glob_opt = "$/Global Options:$/";
-
-    my $len = 0;
-    foreach ( @{ $c->{_global_options} } ) {
-        $len = length($_->get_name) if (length($_->get_name) > $len);
-    }
-    $glob_opt .= join $/ , map { $_->help($len) } sort {$a->order <=> $b->order} @{ $c->{_global_options} };
-    $/ . $glob_opt . $/
+    return usage() . "\n\n" . helpstr($c);
 }
 
 sub usage {
-    my $c = shift;
-    my $global = '';
-    if ($c->{_global_options}) {
-		$global = join ' ', map {$_->usage} @{ $c->{_global_options} };
-	}
-	if (${main::VERSION}) {
-		print "$0 version " . ${main::VERSION} . "\n";
-	}
-    return "Usage: $0 command $global [arguments]";
+    return "Usage: $0 command [arguments]";
 }
 
 sub helpstr {
@@ -78,8 +36,8 @@ sub helpstr {
     # format help string
     foreach ( sort $c->commands() ) {
         $string .= sprintf "    %-*s\t%s\n", $len, $_, 
-                           defined ($c->{'_commands'}->{$_}->{'help'})
-                           ? $c->{'_commands'}->{$_}->{'help'}
+                           defined ($c->{'_commands'}->{$_}->help)
+                           ? $c->{'_commands'}->{$_}->help
                            : ''
                            ;
                 ;
@@ -91,13 +49,19 @@ sub helpstr {
 {
 my %help_attr = ();
 sub UNIVERSAL::Help :ATTR(CODE) {
-     my ($package, $symbol, $ref, $attr, $data, $phase, $filename, $linenum) = @_;
+    my ($package, $symbol, $ref, $attr, $data, $phase, $filename, $linenum) = @_;
+    #my ($package, $symbol, undef, undef, $data) = (@_);
 
     if ($package eq 'main') {
         # If data is a single word, it is received as an array ref. Don't ask.
         $data = join(' ', @$data) if ref($data) eq 'ARRAY';
         $help_attr{ *{$symbol}{NAME} } = $data;
     }
+}
+
+sub get_help_attr_for {
+    my ($self, $cmd) = (@_);
+    return $help_attr{$cmd};
 }
 
 sub register_help {
