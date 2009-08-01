@@ -1,5 +1,6 @@
 package App::Rad;
 use 5.006;
+use App::Rad::Command;
 use App::Rad::Help;
 use Carp                ();
 use warnings;
@@ -226,7 +227,7 @@ sub register_commands {
 
             foreach my $params (keys %{$item}) {
             	Carp::croak 'registered elements may only receive strings or hash references'
-						if ref $item->{$params} and ref $item->{$params} ne 'HASH';
+                    if ref $item->{$params} and ref $item->{$params} ne 'HASH';
             	
             	# we got a rule - push it in.
                 if ($params eq '-ignore_prefix'
@@ -239,7 +240,7 @@ sub register_commands {
                 # help text or a command with an argument list.
                 # either way, we push it to our 'help' hash.
                 else {
-					$help_for_sub{$params} = $item->{$params};
+                    $help_for_sub{$params} = $item->{$params};
                 }
             }
         }
@@ -248,22 +249,22 @@ sub register_commands {
         }
     }
 
-	my $caller = (caller(2) or 'main');
+    my $caller = (caller(2) or 'main');
     my %subs = _get_subs_from($caller);
 
-	# handles explicit command calls first, as
-	# they have priority over generic rules (below)
+    # handles explicit command calls first, as
+    # they have priority over generic rules (below)
     foreach my $cmd (keys %help_for_sub) {
 
         # we only add the sub to the commands
         # list if it's *not* a control function
         if ( not defined $c->{'_functions'}->{$cmd} ) {
 
-			if ($cmd eq '-global') {
-				# use may set it as a flag to enable global arguments
-				# or elaborate on each available argument
-				$c->register(undef, undef, $help_for_sub{$cmd});
-			}
+            if ($cmd eq '-global') {
+                # use may set it as a flag to enable global arguments
+                # or elaborate on each available argument
+                $c->register(undef, undef, $help_for_sub{$cmd});
+            }
             # user wants to register a valid (existant) sub
             elsif ( exists $subs{$cmd} ) {
                 $c->register($cmd, $subs{$cmd}, $help_for_sub{$cmd});
@@ -302,52 +303,45 @@ sub register_commands {
 
                 # avoid duplicate registration
                 if ( !exists $help_for_sub{$subname} ) {
-                    $c->{'_commands'}->{$subname}->{'code'} = $subs{$subname};
-                    App::Rad::Help->register_help($c, $subname, undef);
+                    $c->register($subname, $subs{$subname});
+                    #$c->{'_commands'}->{$subname}->{'code'} = $subs{$subname};
+                    #App::Rad::Help->register_help($c, $subname, undef);
                 }
             }
         }
     }
 }
 
-#TODO: add arguments ***********************************************
-#$c->register_commands( {
-#              command1 => {
-#                             "length" => {
-#                                     type => "num",
-#                                     condition => sub { $_ > 0 },
-#                                     aliases   => [ 'len', 'l' ],
-#                                     to_stash => 'mylength',
-#                                     required  => 1,
-#                                     help       => 'help for the
-#--length argument of command1',
-#                                     error_message => 'this will be
-#printed if "condition" returns false',
-#                             }
-#                             "foo" => 'other arguments can still just
-#have simple help',
-#                             "bar" => {
-#                                     conflicts_with => 'foo',
-#                             },
-#                             "baz" => {
-#                                     default => 42,
-#                             },
-#              },
-#              command2 => {
-#                             ....
-#              },
-#});
-#
+
 sub register_command { return register(@_) }
 sub register {
-    my ($c, $command_name, $coderef, $helptext) = @_;
-    $c->debug("got: " . ref $coderef);
-
+    my ($c, $command_name, $coderef, $extra) = @_;
+    
+    # short circuit
     return unless ref $coderef eq 'CODE';
+    
+    my %command_options = (
+        name => $command_name,
+        code => $coderef,
+    );
+    # the extra parameter may be a help string
+    # or an argument hashref
+    if ($extra) {
+        if (ref $extra) {
+            $command_options{args} = $extra;
+        }
+        else {
+            $command_options{help} = $extra;
+        }
+    }
 
+    my $cmd_obj = App::Rad::Command->new(\%command_options);
+    return unless $cmd_obj;
     $c->debug("registering $command_name as a command.");
-    $c->{'_commands'}->{$command_name}->{'code'} = $coderef;
-    App::Rad::Help->register_help($c, $command_name, $helptext);
+    
+    $c->{'_commands'}->{$command_name} = $cmd_obj;
+    #$c->{'_commands'}->{$command_name}->{'code'} = $coderef;
+    #App::Rad::Help->register_help($c, $command_name, $helptext);
     return $command_name;
 }
 
@@ -447,7 +441,8 @@ sub execute {
 
     # valid command, run it
     if ($c->is_command($c->{'cmd'}) ) {
-        $c->{'output'} = $c->{'_commands'}->{$cmd}->{'code'}->($c);
+        #$c->{'output'} = $c->{'_commands'}->{$cmd}->{'code'}->($c);
+        $c->{'output'} = $c->{'_commands'}->{$cmd}->run($c);
     }
     # no command, run default()
     elsif ( $cmd eq '' ) {
@@ -542,7 +537,7 @@ sub post_process {
 
 sub default {
     my $c = shift;
-    return $c->{'_commands'}->{'help'}->{'code'}->($c);
+    return $c->{'_commands'}->{'help'}->run($c);
 }
 
 
