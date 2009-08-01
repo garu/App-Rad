@@ -49,8 +49,7 @@ sub helpstr {
 {
 my %help_attr = ();
 sub UNIVERSAL::Help :ATTR(CODE) {
-    my ($package, $symbol, $ref, $attr, $data, $phase, $filename, $linenum) = @_;
-    #my ($package, $symbol, undef, undef, $data) = (@_);
+    my ($package, $symbol, undef, undef, $data) = (@_);
 
     if ($package eq 'main') {
         # If data is a single word, it is received as an array ref. Don't ask.
