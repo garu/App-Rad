@@ -414,10 +414,12 @@ sub run {
 
 # run operations 
 # in a shell-like environment
-#sub shell {
-#    my $class = shift;
-#    App::Rad::Shell::shell($class);
-#}
+sub shell {
+    my $class = shift;
+	require App::Rad::Shell;
+    App::Rad::Shell::shell($class);
+}
+
 
 sub execute {
     my ($c, $cmd) = @_;
