@@ -4,6 +4,20 @@ App::Rad::FAQ - Frequently Asked Questions about Rad
 
 =head1 FREQUENTLY ASKED QUESTIONS
 
+=head2 How do I name my commands with the same name as reserved subs like "setup", "pre_process", etc?
+
+The fact that they are reserved subroutine names just means you don't get to call them that internally (i.e. I<inside> your code). You can still name your commands whatever you feel like with C<< $c->register >> or C<< $c->register_commands() >>:
+
+   sub setup {
+       my $c = shift;
+       $c->register_commands({ 'setup' => \&my_setup_command });
+   }
+   
+   sub my_setup_command {
+       ...
+   }
+
+
 =head2 I added a post_process and now my app does not show any help messages! What's wrong?
 
 B<Short answer:> If you wish to print anything returned by commands (including Rad's automatic 'help' command), make sure to call C<< $c->post_process >> at the end of your own post_process sub.
