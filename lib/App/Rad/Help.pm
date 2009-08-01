@@ -62,21 +62,6 @@ sub get_help_attr_for {
     my ($self, $cmd) = (@_);
     return $help_attr{$cmd};
 }
-
-sub register_help {
-    my ($self, $c, $cmd, $helptext) = @_;
-
-    if ((not defined $helptext) && (defined $help_attr{$cmd})) {
-        $helptext = $help_attr{$cmd};
-    }
-
-    # we do $helptext // undef as it would issue a warning otherwise
-    $c->{'_commands'}->{$cmd}->{'help'} = defined $helptext
-                                        ? $helptext
-                                        : undef
-                                        ;
-}
-
 }
 42;
 __END__
@@ -134,10 +119,6 @@ Loads the module into App::Rad
 =head2 help
 
 Show help text
-
-=head2 register_help
-
-Associates help text with command
 
 =head2 usage
 
