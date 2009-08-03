@@ -149,7 +149,7 @@ sub _register_functions {
 
 # retrieves command line arguments
 # to be executed by the main program
-sub _get_input {
+sub parse_input {
     my $c = shift;
 
     my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
@@ -171,6 +171,9 @@ sub _get_input {
 sub _tinygetopt {
     my $c = shift;
 
+    # reset any previous value
+    %{$c->options} = ();
+    
     my @argv = ();
     foreach ( @{$c->argv} ) {
 
@@ -401,7 +404,7 @@ sub run {
 
     # now we get the actual input from
     # the command line (someone using the app!)
-    $c->_get_input();
+    $c->parse_input();
 
     # run the specified command
     $c->execute();
@@ -481,7 +484,8 @@ sub getopt {
     my ($c, @options) = @_;
 
     # reset values from tinygetopt
-    $c->{'_options'} = {};
+    #$c->{'_options'} = {};
+    %{$c->options} = ();
 
     my $parser = new Getopt::Long::Parser;
     $parser->configure( qw(bundling) );
