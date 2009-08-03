@@ -4,7 +4,7 @@ use App::Rad::Tester;
 my ($out, $filename) = test_app(\*DATA);
 
 my $helptext = <<"EOHELP";
-Usage: $filename command  [arguments]
+Usage: $filename command [arguments]
 
 Available Commands:
     help\tshow syntax and available commands

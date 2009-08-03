@@ -4,14 +4,13 @@ SKIP: {
     eval "use Getopt::Long 2.36";
     skip "Getopt::Long 2.36 or higher not installed", 17, if $@;
 
-    use App::Rad;
+    use App::Rad::Tester;
 
     @ARGV = qw(herculoids --igoo=ape -t 4 --zok=3.14 --glup -abc);
 
+    my $c = get_controller;
+
     # kids, don't try this at home...
-    my $c = {};
-    bless $c, 'App::Rad';
-    $c->_init();
     $c->_get_input();
 
     $c->getopt(

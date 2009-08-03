@@ -1,13 +1,11 @@
 use Test::More tests => 18;
-
-use App::Rad;
+use App::Rad::Tester;
 
 @ARGV = qw(commandname bla -x -abc --def --test1=2 --test2=test ble -vvv -x);
 
+my $c = get_controller;
+
 # kids, don't try this at home...
-my $c = {};
-bless $c, 'App::Rad';
-$c->_init();
 $c->_get_input();
 
 is(scalar @ARGV, 9, '@ARGV should have 6 elements');

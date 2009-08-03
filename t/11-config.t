@@ -2,12 +2,9 @@ use FindBin;
 my $path = $FindBin::RealBin . '/etc';
 use Test::More tests => 10;
 
-use App::Rad;
+use App::Rad::Tester;
 
-# kids, don't try this at home...
-my $c = {};
-bless $c, 'App::Rad';
-$c->_init();
+my $c = get_controller;
 
 $c->load_config("$path/config1.txt");
 $c->load_config("$path/config1.txt",

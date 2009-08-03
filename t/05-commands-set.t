@@ -1,11 +1,7 @@
 use Test::More tests => 3;
+use App::Rad::Tester;
 
-use App::Rad;
-
-# kids, don't try this at home...
-my $c = {};
-bless $c, 'App::Rad';
-$c->_init();
+my $c = get_controller;
 
 is($c->cmd, undef, 'no command should be set upon startup');
 
