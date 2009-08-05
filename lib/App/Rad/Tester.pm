@@ -3,7 +3,16 @@ use strict;
 use warnings;
 
 use base 'Exporter';
-our @EXPORT = 'test_app';
+our @EXPORT = qw(test_app get_controller);
+
+sub get_controller {
+    # kids, don't try this at home...
+    require App::Rad;
+    my $c = {};
+    bless $c, 'App::Rad';
+    $c->_init();
+    return $c;
+}
 
 sub test_app {
 	my ($app, @args) = (@_);
@@ -27,6 +36,11 @@ sub test_app {
 		$filename = $app;
 	}
 	else {
+	    #TODO: if we can inject a custom setup()
+	    # (if none exists) on the string, we could
+	    # make it not register anything by default.
+	    # and on the setup tests we just do something
+	    # like use Test::More ();
 		eval 'use File::Temp qw(tempfile tempdir)';
 		return if $@;
 		my $fh;
