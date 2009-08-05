@@ -6,7 +6,7 @@ use App::Rad::Tester;
 my $c = get_controller;
 
 # kids, don't try this at home...
-$c->_get_input();
+$c->parse_input();
 
 is(scalar @ARGV, 9, '@ARGV should have 6 elements');
 is(scalar @{$c->argv}, 2, '$c->argv should have 2 arguments');

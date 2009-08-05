@@ -11,7 +11,7 @@ SKIP: {
     my $c = get_controller;
 
     # kids, don't try this at home...
-    $c->_get_input();
+    $c->parse_input();
 
     $c->getopt(
             'igoo|i=s',
