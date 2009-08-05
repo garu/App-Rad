@@ -1,5 +1,75 @@
 package App::Rad::Command;
+use strict;
+use warnings;
 
+use Carp ();
+
+#TODO: improve this so it can be defined
+# as a standalone command?
+sub new {
+    my ($class, $options) = (@_);
+    my $self = {
+        name => ($options->{name} || ''     ),
+        code => ($options->{code} || sub {} ),
+    };
+    bless $self, $class;
+    
+    $self->set_arguments($options);
+    return $self;
+}
+
+sub run { 
+    my ($self, $c) = (@_);
+    $self->{code}->($c, @_);
+}
+
+sub set_arguments {
+    my ($self, $options) = (@_);
+    
+    #TODO: I don't this this first "if" is ever reached.
+    # set (short) help string. It may have been passed
+    # as a single parameter, or as a ->{help} option
+    if (!ref($options)) {
+        $self->{help} = $options;
+        return; # if it's not a ref, our business is over.
+    }
+    elsif ($options->{help} ) {
+        $self->{help} = $options->{help};
+    }
+    # if help for the command is not given, we try to
+    # get it from the :Help() attribute
+    elsif ($self->{name} ne '') {
+        require App::Rad::Help;
+        $self->{help} = App::Rad::Help->get_help_attr_for($self->{name});
+    }
+
+    # if we got here, the command was set with a hashref
+    # giving us information about it's accepted arguments
+    foreach my $argument (keys %{ $options->{args} }) {
+        my $arg_ref = ref $options->{args}->{$argument};
+        if ($arg_ref) {
+            Carp::croak "arguments can only receive strings or HASH references\n"
+                unless $arg_ref eq 'HASH';
+            $self->set_arg($argument, $options->{args}->{$argument});
+        }
+    }
+}
+
+sub set_arg {
+    my ($self, $arg, $options) = (@_);
+
+    foreach my $value (keys %{$options}) {
+        if ($value eq 'type') {
+            my %types = ( 'num' => qr{\d+}, 'str' => qr{.+});
+            Carp::croak "Invalid type\n"
+                unless $types{ lc $options->{$value} };
+        }
+        else {
+            Carp::croak "unknown argument attribute '$arg'\n";
+        }
+        $self->{args}->{$arg}->{$value} = $options->{$value};
+    }
+}
 #TODO: add arguments ***********************************************
 #$c->register_commands( {
 #              command1 => {
@@ -29,46 +99,11 @@ package App::Rad::Command;
 #});
 #
 
-#TODO: improve this so it can be defined
-# as a standalone command?
-sub new {
-    my ($class, $options) = (@_);
-    my $self = {
-        name => ($options->{name} || ''     ),
-        code => ($options->{code} || sub {} ),
-    };
-    bless $self, $class;
-    
-    $self->set_arguments($options);
-    return $self;
-}
 
-sub run { 
-    my ($self, $c) = (@_);
-    $self->{code}->($c, @_);
-}
-
-sub set_arguments {
-    my ($self, $options) = (@_);
-    
-    # set (short) help string. It may have been passed
-    # as a single parameter, or as a ->{help} option
-    if (!ref($options)) {
-        $self->{help} = $options;
-        return; # if it's not a ref, our business is over.
-    }
-    elsif ($options->{help} ) {
-        $self->{help} = $options->{help};
-    }
-    elsif ($self->{name} ne '') {
-        require App::Rad::Help;
-        $self->{help} = App::Rad::Help->get_help_attr_for($self->{name});
-    }
-}
 
 sub help { return shift->{help} }
 
-# a.k.a. long help - called with ./myapp help command
+#TODO: a.k.a. long help - called with ./myapp help command
 #sub description {
 #    my $self = shift;
 #    return help . argument_help # or something like that
@@ -79,46 +114,31 @@ __END__
 
 =head1 DESCRIPTION
 
-In a main App::Rad file, each sub you create turns into a command:
+You can register a command in App::Rad in three diferent ways:
 
-  use App::Rad;
-  
-  sub foo {
-      my $c = shift;
-      return q{ './myapp.pl foo' will get here };
-  }
-  
-  sub bar {
-      my $c = shift;
-      return q{ './myapp.pl bar' will get here };
-  }
+=head2 Simple register:
 
-...unless you specifically tell Rad to do otherwise:
+  $c->register('foo');            # "./myapp foo" goes to \&foo
+  $c->register('foo', \&bar);     # "./myapp foo" goes to \&bar
 
-  use App::Rad;
-  
-  sub setup {
-      my $c = shift;
-      $c->register( 'foo', \&baz );
-  }
-  
-  sub baz {
-      my $c = shift;
-      return q{ './myapp.pl foo' will get here };
-  }
-  
-  sub foo {
-      return q{this cannot be called directly as an external command};
-  }
-  
-You may also create each command as a single file inside you main app's "lib" folder:
 
-  # this will automatically register "foo" (note the lowecase) as
-  # a command of MyApp.
-  package MyApp::Foo;
-  use base 'App::Rad::Command';
-  
-  sub run {
-  }
+=head2 Register with help text
+
+  $c->register('foo', \&bar, 'this is the help for command foo');
+
+=head2 Extended arguments registering
+
+  $c->register(
+        'foo' => {
+             "length" => {
+                     type      => "num",
+                     condition => sub { $_ > 0 },
+                     aliases   => [ 'len', 'l' ],
+                     to_stash  => 'mylength',
+                     required  => 1,
+                     help      => 'help for the lenght attribute',
+              }
+        }
+  )
   
   
