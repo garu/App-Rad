@@ -15,6 +15,7 @@ our $VERSION = '1.04';
 
 my @OPTIONS = ();
 
+# - "I'm so excited! Feels like I'm 14 again" (edenc on Rad)
 sub _init {
     my $c = shift;
 
@@ -213,6 +214,7 @@ sub load_config {
 }
 
 
+# - "Wow! you guys rock!" (zoso on Rad)
 #TODO: this code probably could use some optimization
 sub register_commands {
     my $c = shift;
@@ -387,6 +389,8 @@ sub cmd :lvalue {
 }
 
 
+# - "I'm loving having something else write up the 80% drudge
+#   code for the small things." (benh on Rad)
 sub run {
     my $class = shift;
     my $c = {};

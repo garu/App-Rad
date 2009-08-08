@@ -36,6 +36,8 @@ sub run {
     $self->{code}->($c, @_);
 }
 
+# - "I gotta get a job that pays me to do this -- it's just too much fun"
+# (SmokeMachine on Rad)
 sub set_arguments {
     my ($self, $options) = (@_);
     
