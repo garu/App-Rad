@@ -191,7 +191,7 @@ sub _tinygetopt {
         }
         # long option: --name or --name=value
         elsif (m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
-            $c->options->{$1} = $2 ? $2 
+            $c->options->{$1} = defined $2 ? $2 
 			                  : 1
                               ;
         }

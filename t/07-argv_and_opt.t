@@ -1,20 +1,20 @@
 use Test::More tests => 18;
 use App::Rad::Tester;
 
-@ARGV = qw(commandname bla -x -abc --def --test1=2 --test2=test ble -vvv -x);
+@ARGV = qw(commandname bla -x -abc --def --test1=0 --test2=test ble -vvv -x);
 
 my $c = get_controller;
 
 # kids, don't try this at home...
 $c->parse_input();
 
-is(scalar @ARGV, 9, '@ARGV should have 6 elements');
+is(scalar @ARGV, 9, '@ARGV should have 9 elements');
 is(scalar @{$c->argv}, 2, '$c->argv should have 2 arguments');
-is(keys %{$c->options}, 8, '$c->options should have 6 elements');
+is(keys %{$c->options}, 8, '$c->options should have 8 elements');
 
 is($c->cmd, 'commandname', 'command name should be set');
 
-is_deeply(\@ARGV, ['bla', '-x', '-abc', '--def', '--test1=2', '--test2=test', 'ble', '-vvv', '-x'], 
+is_deeply(\@ARGV, ['bla', '-x', '-abc', '--def', '--test1=0', '--test2=test', 'ble', '-vvv', '-x'], 
    '@ARGV should have just the passed arguments, not the command name'
   );
 
@@ -29,7 +29,7 @@ ok(!defined $c->options->{'e'}  , "'-e' should *not* be set");
 ok(!defined $c->options->{'f'}  , "'-f' should *not* be set");
 
 ok(defined $c->options->{'def'}, "'--def' should be set");
-is($c->options->{'test1'}, 2, "'--test1' should be set to '2'");
+is($c->options->{'test1'}, 0, "'--test1' should be set to '0'");
 is($c->options->{'test2'}, 'test', "'--test2' should be set to 'test'");
 is($c->options->{'v'}, 3, "single arguments can be incremented when put together");
 is($c->options->{'x'}, 2, "single arguments can be incremented when invoked separately");
