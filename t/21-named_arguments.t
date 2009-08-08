@@ -1,4 +1,4 @@
-use Test::More tests => 1;
+use Test::More tests => 2;
 use App::Rad::Tester;
 
 #TODO test help output with arguments
@@ -19,5 +19,6 @@ is_deeply(\@ARGV, []);
 
 @ARGV = qw(bar --foo);
 $c->parse_input;
+is($c->options->{foo}, 1);
 
 #TODO test output with illegal argument
