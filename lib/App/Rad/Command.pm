@@ -8,13 +8,26 @@ use Carp ();
 # as a standalone command?
 sub new {
     my ($class, $options) = (@_);
+
     my $self = {
         name => ($options->{name} || ''     ),
         code => ($options->{code} || sub {} ),
     };
     bless $self, $class;
-    
-    $self->set_arguments($options);
+
+    if ($options->{help} ) {
+        $self->{help} = $options->{help};
+    }
+    # if help for the command is not given, we try to
+    # get it from the :Help() attribute
+    elsif ($self->{name} ne '') {
+        require App::Rad::Help;
+        $self->{help} = App::Rad::Help->get_help_attr_for($self->{name});
+    }
+
+    $self->set_arguments($options->{args}) 
+        if $options->{args};
+
     return $self;
 }
 
@@ -26,25 +39,9 @@ sub run {
 sub set_arguments {
     my ($self, $options) = (@_);
     
-    #TODO: I don't this this first "if" is ever reached.
-    # set (short) help string. It may have been passed
-    # as a single parameter, or as a ->{help} option
-    if (!ref($options)) {
-        $self->{help} = $options;
-        return; # if it's not a ref, our business is over.
-    }
-    elsif ($options->{help} ) {
-        $self->{help} = $options->{help};
-    }
-    # if help for the command is not given, we try to
-    # get it from the :Help() attribute
-    elsif ($self->{name} ne '') {
-        require App::Rad::Help;
-        $self->{help} = App::Rad::Help->get_help_attr_for($self->{name});
-    }
-
-    # if we got here, the command was set with a hashref
-    # giving us information about it's accepted arguments
+    return unless ref $options;
+    
+    # the command may have been set with a list of accepted arguments
     foreach my $argument (keys %{ $options->{args} }) {
         my $arg_ref = ref $options->{args}->{$argument};
         if ($arg_ref) {
