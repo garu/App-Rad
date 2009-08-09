@@ -31,42 +31,88 @@ sub new {
     return $self;
 }
 
-sub run { 
-    my ($self, $c) = (@_);
-    $self->{code}->($c, @_);
-}
 
 # - "I gotta get a job that pays me to do this -- it's just too much fun"
 # (SmokeMachine on Rad)
 sub set_arguments {
-    my ($self, $options) = (@_);
+    my ($self, $arguments) = (@_);
+    return unless ref $arguments;
     
-    return unless ref $options;
-    
-    # the command may have been set with a list of accepted arguments
-    foreach my $argument (keys %{ $options->{args} }) {
-        my $arg_ref = ref $options->{args}->{$argument};
-        if ($arg_ref) {
-            Carp::croak "arguments can only receive strings or HASH references\n"
-                unless $arg_ref eq 'HASH';
-            $self->set_arg($argument, $options->{args}->{$argument});
-        }
+    foreach my $arg (keys %{ $arguments }) {
+        $self->set_arg($arg, $arguments->{$arg});
     }
 }
 
 sub set_arg {
     my ($self, $arg, $options) = (@_);
 
-    foreach my $value (keys %{$options}) {
-        if ($value eq 'type') {
-            my %types = ( 'num' => qr{\d+}, 'str' => qr{.+});
-            Carp::croak "Invalid type\n"
-                unless $types{ lc $options->{$value} };
+    my $opt_type = ref $options;
+    if ($opt_type) {
+        Carp::croak "arguments can only receive HASH references"
+            unless $opt_type eq 'HASH';
+
+        my %accepted = (
+            type           => 1,
+            help           => 1,
+            condition      => 1, 
+            aliases        => 1,
+            to_stash       => 1,
+            required       => 1,
+            default        => 1,
+            error_msg      => 1,
+            conflicts_with => 1,
+        );
+        foreach my $value (keys %{$options}) {
+            Carp::croak "unknown attribute '$value' for argument '$arg'\n"
+                unless $accepted{$value};
+                
+            # stupid error checking
+            my $opt_ref = ref $options->{$value};
+            if ($value eq 'type') {
+                my %types = ( 'num' => qr{\d+}, 'str' => qr{.+});
+                Carp::croak "Invalid type\n"
+                    unless $opt_ref or $types{ lc $options->{$value} };
+            }
+            elsif ($value eq 'condition' and (!$opt_ref or $opt_ref ne 'CODE')) {
+                Carp::croak "'condition' attribute must be a CODE reference\n"
+            }
+            elsif ($value eq 'help' and $opt_ref) {
+                Carp::croak "'help' attribute must be a string\n"
+            }
+            elsif ($value eq 'aliases' and ($opt_ref and $opt_ref ne 'ARRAY')) {
+                Carp::croak "'aliases' attribute must be a string or an ARRAY ref\n";
+            }
+            elsif ($value eq 'to_stash' and ($opt_ref and $opt_ref ne 'ARRAY')) {
+                Carp::croak "'to_stash' attribute must be a scalar or an ARRAY ref\n";
+            }
+            elsif($value eq 'required') {
+                if ($accepted{'default'}) {
+                    $accepted{'required'} = 0;
+                }
+                else {
+                    Carp::croak "'required' and 'default' attributes cannot be used at the same time\n";
+                }
+            }
+            elsif($value eq 'default') {
+                if ($accepted{'required'}) {
+                    $accepted{'default'} = 0;
+                }
+                else {
+                    Carp::croak "'required' and 'default' attributes cannot be used at the same time\n";
+                }
+            }
+            elsif ($value eq 'error_msg' and $opt_ref) {
+                Carp::croak "'error_msg' attribute must be a string\n"
+            }
+            elsif ($value eq 'conflicts_with' and ($opt_ref and $opt_ref ne 'ARRAY')) {
+                Carp::croak "'conflicts_with' attribute must be a scalar or an ARRAY ref\n";
+            }
+            $self->{args}->{$arg}->{$value} = $options->{$value};
         }
-        else {
-            Carp::croak "unknown argument attribute '$arg'\n";
-        }
-        $self->{args}->{$arg}->{$value} = $options->{$value};
+    }
+    # got a string. Set it as the help for the argument
+    else {
+        $self->{args}->{$arg}->{help} = $options;
     }
 }
 #TODO: add arguments ***********************************************
@@ -99,8 +145,14 @@ sub set_arg {
 #
 
 
-
+sub name { return shift->{name} }
 sub help { return shift->{help} }
+
+sub run { 
+    my ($self, $c) = (@_);
+    $self->{code}->($c, @_);
+}
+
 
 #TODO: a.k.a. long help - called with ./myapp help command
 #sub description {
