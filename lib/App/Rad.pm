@@ -1205,8 +1205,8 @@ Default's default (grin) is just an alias for the help command.
     sub default {
         my $c = shift;
 
-        # will fall here if the given
-        # command isn't valid.
+        # will fall here if no command is issued
+        # or if an invalid command is called (see below)
     }
 
 You are free (and encouraged) to change the default behavior to whatever you want. This is rather useful for when your program will only do one thing, and as such it receives only parameters instead of command names. In those cases, use the "C<< default() >>" sub as your main program's sub and parse the parameters with C<< $c->argv >> and C<< $c->getopt >> as you would in any other command.
@@ -1240,8 +1240,8 @@ If implemented, this function is called automatically right after the requested 
     sub post_process {
         my $c = shift;
 
-        if ( $c->output() ) {
-            print $c->output() . "\n";
+        if ( $c->output ) {
+            print $c->output . "\n";
         }
     }
 
@@ -1291,7 +1291,7 @@ You can find documentation for this module with the perldoc command.
 
     perldoc App::Rad
 
-Although this Module comes without any warraties whatsoever (see DISCLAIMER below), I try really hard to provide some quality assurance for the users. This means I not only try to close all reported bugs in the minimum amount of time but I also try to find some on my own.
+Although this Module comes without any warraties whatsoever (see DISCLAIMER below), I try really hard to provide some quality assurance for the users to guarantee proper stability and consistency among different platforms. This means I not only try to close all reported bugs in the minimum amount of time but I also try to find some on my own.
 
 This version of App::Rad comes with 183 tests and I keep my eye constantly on CPAN Testers L<http://www.cpantesters.org/show/App-Rad.html> to ensure it passes all of them, in all platforms. You can send me your own App::Rad tests if you feel I'm missing something and I'll hapilly add them to the distribution.
 
@@ -1359,9 +1359,15 @@ Breno G. de Oliveira, C<< <garu at cpan.org> >>
 
 Ben Hengst
 
+Eden Cardim
+
+Esteban Manchado
+
 Fernando Correa
 
 Flavio Glock
+
+Gabriel Vieira
 
 Thanks to everyone for contributing! Please let me know if I've skipped your name by accident.
 
