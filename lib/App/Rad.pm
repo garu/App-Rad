@@ -165,7 +165,17 @@ sub parse_input {
     $c->debug('received parameters: ' . join (' ', @{$c->argv} ));
 
     $c->_tinygetopt();
+
+    # our return value will determine how
+    # the program will flow (valid, default, invalid)
+    if ( $cmd eq '' or $c->is_command($cmd) ) {
+        return $cmd;
+    }
+    else {
+        return;
+    }
 }
+
 
 # stores arguments passed to a
 # command via --param[=value] or -p
@@ -201,6 +211,24 @@ sub _tinygetopt {
         }
     }
     @{$c->argv} = @argv;
+}
+
+
+sub _run_full_round {
+    my $c = shift;
+    my $sub = shift;
+    
+    $c->debug('calling pre_process function...');
+    $c->{'_functions'}->{'pre_process'}->($c);
+
+    $c->debug('executing command...');
+    $c->{'output'} = $sub->($c);
+
+    $c->debug('calling post_process function...');
+    $c->{'_functions'}->{'post_process'}->($c);
+
+    $c->debug('reseting output');
+    $c->{'output'} = undef;
 }
 
 
@@ -340,8 +368,9 @@ sub register {
 
     my $cmd_obj = App::Rad::Command->new(\%command_options);
     return unless $cmd_obj;
+    #TODO: I don't think this message is ever being printed
     $c->debug("registering $command_name as a command.");
-    
+
     $c->{'_commands'}->{$command_name} = $cmd_obj;
     return $command_name;
 }
@@ -408,10 +437,23 @@ sub run {
 
     # now we get the actual input from
     # the command line (someone using the app!)
-    $c->parse_input();
+    my $cmd = $c->parse_input();
+
+    if (not defined $cmd) {
+        $c->debug("'" . $c->cmd . "' is not a valid command. Falling to invalid.");
+        $cmd = $c->{'_functions'}->{'invalid'};
+    }
+    elsif ($cmd eq '') {
+        $c->debug('no command detected. Falling to default');
+        $cmd = $c->{'_functions'}->{'default'};
+    }
+    else {
+         my $obj = $c->{'_commands'}->{$cmd};
+         $cmd = sub { $obj->run(@_) }
+    }
 
     # run the specified command
-    $c->execute();
+    $c->_run_full_round($cmd);
 
     # that's it. Tear down everything and go home :)
     $c->{'_functions'}->{'teardown'}->($c);
@@ -438,34 +480,16 @@ sub execute {
     else {
         $cmd = $c->{'cmd'};  # now $cmd always has the called cmd
     }
-
-    $c->debug('calling pre_process function...');
-    $c->{'_functions'}->{'pre_process'}->($c);
-
-    $c->debug("executing '$cmd'...");
-
-    # valid command, run it
-    if ($c->is_command($c->{'cmd'}) ) {
-        $c->{'output'} = $c->{'_commands'}->{$cmd}->run($c);
+    
+    # valid command, run it and return the command name
+    if ( $c->is_command($cmd) ) {
+        $c->_run_full_round( sub { $c->{'_commands'}->{$cmd}->run(@_) } );
+        return $cmd;
     }
-    # no command, run default()
-    elsif ( $cmd eq '' ) {
-        $c->debug('no command detected. Falling to default');
-        $c->{'output'} = $c->{'_functions'}->{'default'}->($c);
-    }
-    # invalid command, run invalid()
     else {
-        $c->debug("'$cmd' is not a valid command. Falling to invalid.");
-        $c->{'output'} = $c->{'_functions'}->{'invalid'}->($c);
+        # if not a command, return undef
+        return;
     }
-
-    # 3: post-process the result
-    # from the command
-    $c->debug('calling post_process function...');
-    $c->{'_functions'}->{'post_process'}->($c);
-
-    $c->debug('reseting output');
-    $c->{'output'} = undef;
 }
 
 sub argv    { return $_[0]->{'_ARGV'}     }
