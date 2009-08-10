@@ -149,7 +149,8 @@ sub name { return shift->{name} }
 sub help { return shift->{help} }
 
 sub run { 
-    my ($self, $c) = (@_);
+    my $self = shift;
+    my $c    = shift;
     $self->{code}->($c, @_);
 }
 
