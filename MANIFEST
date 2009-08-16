@@ -8,6 +8,8 @@ lib/App/Rad/Config.pm
 lib/App/Rad/Help.pm
 lib/App/Rad/Include.pm
 lib/App/Rad/Exclude.pm
+lib/App/Rad/Command.pm
+lib/App/Rad/Shell.pm
 t/pod.t
 t/00-load.t
 t/01-standard.t
@@ -39,3 +41,5 @@ t/lib/MyStubPlugin.pm
 t/lib/App/Rad/Plugin/MyStubPlugin.pm
 t/etc/config1.txt
 t/etc/config2.txt
+t/21-named-arguments.t
+t/22-commands-with-args.t
