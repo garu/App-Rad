@@ -153,28 +153,150 @@ sub _register_functions {
 sub parse_input {
     my $c = shift;
 
-    my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
-            ? shift @ARGV
-            : ''
-            ;
-
-    @{$c->argv} = @ARGV;
-    $c->{'cmd'} = $cmd;
-
-    $c->debug('received command: ' . $c->{'cmd'});
-    $c->debug('received parameters: ' . join (' ', @{$c->argv} ));
-
-    $c->_tinygetopt();
-
-    # our return value will determine how
-    # the program will flow (valid, default, invalid)
-    if ( $cmd eq '' or $c->is_command($cmd) ) {
-        return $cmd;
+    # parse global arguments out of ARGV
+    if ($c->{'_globals'}) {
+        $c->_parse(\@ARGV, $c->{'_globals'});
     }
-    else {
-        return;
+    
+    #TODO: make this suck less
+    # now the next item in ARGV is our command name.
+    # If it doesn't exist, we make it blank so we
+    # can call the 'default' command
+    my $cmd = $c->{'cmd'} = '';
+    if (defined $ARGV[0]) {
+        my $cmd_obj = undef;
+        
+        # argument looks like command
+        if (substr($ARGV[0], 0, 1) ne '-') {
+            $cmd = shift @ARGV;
+            $c->{'cmd'} = $cmd;
+            # valid command
+            if ($c->is_command($cmd)) {
+                $cmd_obj = $c->{'_commands'}->{$cmd};
+            }
+            # invalid command
+            else {
+                $cmd = undef;
+            }
+        }
+        my @tARGV = @ARGV;
+        $c->_parse(\@tARGV, $cmd_obj);
+    }
+    return $cmd; # default (''), invalid (undef), command ($cmd)
+}
+
+sub _parse {
+    my ($c, $arg_ref, $cmd_obj) = (@_);
+    
+    # reset any previous value
+    %{$c->options} = ();
+    @{$c->argv}    = ();
+    
+    while (my $arg = shift @{$arg_ref} ) {
+        # single option (could be grouped)
+        if ( $arg =~ m/^\-([^\-\=]+)$/o) {
+            my @args = split //, $1;
+            foreach (@args) {
+				if ($c->options->{$_}) {
+					$c->options->{$_}++;
+				}
+				else {
+					$c->options->{$_} = 1;
+				}
+            }
+        }
+        # long option: --name or --name=value
+        elsif ( $arg =~ m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
+            $c->options->{$1} = defined $2 ? $2 
+			                  : 1
+                              ;
+        }
+        else {
+            push @{$c->argv}, $arg;
+        }
     }
 }
+
+#    my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
+#            ? shift @ARGV 
+#            : ($c->{'_globals'})
+#            ? undef : ''
+#            ;
+#
+
+
+#    my $cmd = '';
+#    while (my $token = shift @ARGV) {
+#
+#        # found a command, get it and break out
+#        if ($c->is_command($token)) {
+#            $cmd = $token;
+#            last;
+#        }
+#        # found global option, put it where it belongs
+#        elsif ($c->{'_globals'} and substr($token, 0, 1) eq '-') {
+#            my $ret = $c->{'_globals'}->_parse_argument(
+#                             $c->{'_globals'}, 
+#                             $c->{'_global_options'}, 
+#                             $token
+#                            );
+#            # if we have global options set, we only get here
+#            if ($ret == 0) {
+#                #TODO: trigger error message
+#            }
+#            elsif ($ret == 1) {
+#                push @{$c->argv}, $token;
+#            }
+#        }
+#        # no command found and not parsing as globals, run 'default'
+#        else {
+#            unshift @ARGV, $token;
+#            last;
+#        }
+#    }
+#    my @tARGV = @ARGV;
+#    while (my $token = shift @tARGV) {
+#        $c->_process_arg($c->{'_commands'}->{$cmd},
+#                         $c->{'_options'}, 
+#                         $token
+#                        );
+#    }
+#}
+#
+# ./myapp --foo -a -b -vvv comando -d -e -v
+
+# se eu tenho -globals = 1
+# ==> 'comando' é comando? 'comando' : 'invalid'
+
+# se eu tenho -globals => {args}
+# ==> idem, mas dá erro se algum arg global der xabu
+
+# se NAO tenho -globals
+# ==> 'comando' é comando? 'comando' : 'default'
+
+
+#    my $cmd = (defined ($ARGV[0]) and substr($ARGV[0], 0, 1) ne '-')
+#            ? shift @ARGV
+#            : ''
+#            ;
+#
+#    @{$c->argv} = @ARGV;
+#    $c->{'cmd'} = $cmd;
+#
+#    $c->debug('received command: ' . $c->{'cmd'});
+#    $c->debug('received parameters: ' . join (' ', @{$c->argv} ));
+#
+#    $c->_tinygetopt();
+#
+#    # our return value will determine how
+#    # the program will flow (valid, default, invalid)
+#    if ( $cmd eq '' or $c->is_command($cmd) ) {
+#        return $cmd;
+#    }
+#    else {
+#        return;
+#    }
+#}
 
 
 # stores arguments passed to a
@@ -293,10 +415,16 @@ sub register_commands {
         # list if it's *not* a control function
         if ( not defined $c->{'_functions'}->{$cmd} ) {
 
-            if ($cmd eq '-global') {
+            if ($cmd eq '-globals') {
                 # use may set it as a flag to enable global arguments
                 # or elaborate on each available argument
-                $c->register(undef, undef, $help_for_sub{$cmd});
+                my %command_options = ( name => '', code => sub {} );
+                if (ref $help_for_sub{$cmd}) {
+                    $command_options{args} = $help_for_sub{$cmd};
+                }
+                my $cmd_obj = App::Rad::Command->new(\%command_options);
+                $c->{'_globals'} = $cmd_obj;
+#                $c->register(undef, undef, $help_for_sub{$cmd});
             }
             # user wants to register a valid (existant) sub
             elsif ( exists $subs{$cmd} ) {
@@ -347,7 +475,7 @@ sub register_commands {
 sub register_command { return register(@_) }
 sub register {
     my ($c, $command_name, $coderef, $extra) = @_;
-    
+
     # short circuit
     return unless ref $coderef eq 'CODE';
     
