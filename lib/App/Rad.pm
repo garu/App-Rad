@@ -158,7 +158,7 @@ sub parse_input {
         $c->_parse(\@ARGV, $c->{'_globals'});
     }
     
-    #TODO: make this suck less
+    #TODO: this could use some major improvements
     # now the next item in ARGV is our command name.
     # If it doesn't exist, we make it blank so we
     # can call the 'default' command
@@ -191,25 +191,29 @@ sub _parse {
     # reset any previous value
     %{$c->options} = ();
     @{$c->argv}    = ();
-    
+
     while (my $arg = shift @{$arg_ref} ) {
+
         # single option (could be grouped)
         if ( $arg =~ m/^\-([^\-\=]+)$/o) {
             my @args = split //, $1;
             foreach (@args) {
-				if ($c->options->{$_}) {
-					$c->options->{$_}++;
-				}
-				else {
-					$c->options->{$_} = 1;
-				}
+                # TODO: _parse_arg should return the options' name
+                # and its to_stash values
+                #$cmd_obj->_validate_arg($_) if defined $cmd_obj;
+                if ($c->options->{$_}) {
+                    $c->options->{$_}++;
+                }
+                else {
+                    $c->options->{$_} = 1;
+                }
             }
         }
         # long option: --name or --name=value
         elsif ( $arg =~ m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
-            $c->options->{$1} = defined $2 ? $2 
-			                  : 1
-                              ;
+            my ($key, $val) = ($1, (defined $2 ? $2 : 1));
+            #$cmd_obj->_validate_arg($key, $val) if defined $cmd_obj;
+            $c->options->{$key} = $val;
         }
         else {
             push @{$c->argv}, $arg;
@@ -301,40 +305,40 @@ sub _parse {
 
 # stores arguments passed to a
 # command via --param[=value] or -p
-sub _tinygetopt {
-    my $c = shift;
-
-    # reset any previous value
-    %{$c->options} = ();
-    
-    my @argv = ();
-    foreach ( @{$c->argv} ) {
-
-        # single option (could be grouped)
-        if ( m/^\-([^\-\=]+)$/o) {
-            my @args = split //, $1;
-            foreach (@args) {
-				if ($c->options->{$_}) {
-					$c->options->{$_}++;
-				}
-				else {
-					$c->options->{$_} = 1;
-				}
-            }
-        }
-        # long option: --name or --name=value
-        elsif (m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
-            $c->options->{$1} = defined $2 ? $2 
-			                  : 1
-                              ;
-        }
-        else {
-            push @argv, $_;
-        }
-    }
-    @{$c->argv} = @argv;
-}
-
+#sub _tinygetopt {
+#    my $c = shift;
+#
+#    # reset any previous value
+#    %{$c->options} = ();
+#    
+#    my @argv = ();
+#    foreach ( @{$c->argv} ) {
+#
+#        # single option (could be grouped)
+#        if ( m/^\-([^\-\=]+)$/o) {
+#            my @args = split //, $1;
+#            foreach (@args) {
+#				if ($c->options->{$_}) {
+#					$c->options->{$_}++;
+#				}
+#				else {
+#					$c->options->{$_} = 1;
+#				}
+#            }
+#        }
+#        # long option: --name or --name=value
+#        elsif (m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
+#            $c->options->{$1} = defined $2 ? $2 
+#			                  : 1
+#                              ;
+#        }
+#        else {
+#            push @argv, $_;
+#        }
+#    }
+#    @{$c->argv} = @argv;
+#}
+#
 
 sub _run_full_round {
     my $c = shift;
@@ -496,9 +500,9 @@ sub register {
 
     my $cmd_obj = App::Rad::Command->new(\%command_options);
     return unless $cmd_obj;
-    #TODO: I don't think this message is ever being printed
+    #TODO: I don't think this message is ever being printed (wtf?)
     $c->debug("registering $command_name as a command.");
-
+    
     $c->{'_commands'}->{$command_name} = $cmd_obj;
     return $command_name;
 }
@@ -576,8 +580,12 @@ sub run {
         $cmd = $c->{'_functions'}->{'default'};
     }
     else {
-         my $obj = $c->{'_commands'}->{$cmd};
-         $cmd = sub { $obj->run(@_) }
+        my $obj = $c->{'_commands'}->{$cmd};
+         
+        # set default values for command (if available)
+        $obj->_set_default_values($c->options, $c->stash);
+         
+        $cmd = sub { $obj->run(@_) }
     }
 
     # run the specified command
@@ -611,7 +619,11 @@ sub execute {
     
     # valid command, run it and return the command name
     if ( $c->is_command($cmd) ) {
-        $c->_run_full_round( sub { $c->{'_commands'}->{$cmd}->run(@_) } );
+        my $cmd_obj = $c->{'_commands'}->{$cmd};
+        # set default values for command (if available)
+        $cmd_obj->_set_default_values($c->options, $c->stash);
+        
+        $c->_run_full_round( sub { $cmd_obj->run(@_) } );
         return $cmd;
     }
     else {
