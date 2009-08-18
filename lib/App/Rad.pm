@@ -199,21 +199,36 @@ sub _parse {
             my @args = split //, $1;
             foreach (@args) {
                 # TODO: _parse_arg should return the options' name
-                # and its to_stash values
-                #$cmd_obj->_validate_arg($_) if defined $cmd_obj;
-                if ($c->options->{$_}) {
-                    $c->options->{$_}++;
-                }
-                else {
-                    $c->options->{$_} = 1;
+                # and its "to_stash" values
+                my ($opt, $to_stash) = ($_, undef);
+                ($opt, $to_stash) = $cmd_obj->_validate_arg($opt)
+                    if defined $cmd_obj;
+
+                $c->options->{$opt} = (defined $c->options->{$opt})
+                                    ? $c->options->{$opt} + 1 
+                                    : 1
+                                    ;
+
+                foreach my $stash_key (@$to_stash) {
+                    $c->stash->{$stash_key} = (defined $c->stash->{$stash_key})
+                                            ? $c->stash->{$stash_key} + 1
+                                            : 1
+                                            ;
                 }
             }
         }
         # long option: --name or --name=value
         elsif ( $arg =~ m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
             my ($key, $val) = ($1, (defined $2 ? $2 : 1));
-            #$cmd_obj->_validate_arg($key, $val) if defined $cmd_obj;
+            
+            my $to_stash = undef;
+            ($key, $to_stash) = $cmd_obj->_validate_arg($key, $val)
+                if defined $cmd_obj;
+            
             $c->options->{$key} = $val;
+            foreach my $stash_key (@$to_stash) {
+                $c->stash->{$stash_key} = $val;
+            }
         }
         else {
             push @{$c->argv}, $arg;
