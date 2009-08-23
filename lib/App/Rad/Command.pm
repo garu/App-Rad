@@ -149,10 +149,6 @@ sub _set_default_values {
     }
 }
 
-sub _validate_arg {
-    my ($self, $opt, $val) = (@_);
-    return $opt;
-}
 
 # _parse_arg should return the options' name
 # and its "to_stash" values
@@ -203,104 +199,6 @@ ALIAS_CHECK: # try to find if user given an alias instead
     # return argument and stash list ref
     return ($arg_real_name, undef);
 }
-
-
-sub _parse_argument {
-    my ($self, $c, $arg) = (@_);
-    
-    # single option (could be grouped)
-    if ( $arg =~ m/^\-([^\-\=]+)$/o) {
-        my @args = split //, $1;
-        foreach (@args) {
-            if ($c->options->{$_}) {
-                $c->options->{$_}++;
-            }
-            else {
-                $c->options->{$_} = 1;
-            }
-        }
-    }
-    # long option: --name or --name=value
-    elsif ( $arg =~ m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
-        $c->options->{$1} = defined $2 ? $2 
-                          : 1
-                          ;
-    }
-    else {
-        push @{$c->argv}, $arg;
-    }
-}
-
-# returns 0 if argument spawned an error
-# returns 1 if argument was not parsed into $opt_ref
-# returns 2 if argument was parsed into $opt_ref
-#sub _parse_argument {
-#    my ($self, $opt_ref, $arg) = (@_);
-#    
-#    if ($self->args) {
-#        return 0; # TODO
-#    }
-#
-#    # always accept if we don't have any args specs.
-#    return $self->_tinygetopt($opt_ref, $arg);
-#}
-#
-#sub _tinygetopt {
-#    my ($self, $opt_ref, $arg) = (@_);
-#    
-#    # single option (could be grouped)
-#    if ( $arg =~ m{^\-([^\-\=]+)$}o) {
-#        my @args = split //, $1;
-#        foreach (@args) {
-#            if ($opt_ref->{$_}) {
-#                $opt_ref->{$_}++;
-#            }
-#            else {
-#                $opt_ref->{$_} = 1;
-#            }
-#        }
-#    }
-#    # long option: --name or --name=value
-#    elsif (m{^\-\-([^\-\=]+)(?:\=(.+))?$}o) {
-#        $opt_ref->{$1} = defined $2 ? $2 
-#                          : 1
-#                          ;
-#    }
-#    # unrecognized option, forwards to $c->argv
-#    else {
-#        return 1;
-#    }
-#    return 2;
-#}
-#
-#TODO: add arguments ***********************************************
-#$c->register_commands( {
-#              command1 => {
-#                             "length" => {
-#                                     type => "num",
-#                                     condition => sub { $_ > 0 },
-#                                     aliases   => [ 'len', 'l' ],
-#                                     to_stash => 'mylength',
-#                                     required  => 1,
-#                                     help       => 'help for the
-#--length argument of command1',
-#                                     error_message => 'this will be
-#printed if "condition" returns false',
-#                             }
-#                             "foo" => 'other arguments can still just
-#have simple help',
-#                             "bar" => {
-#                                     conflicts_with => 'foo',
-#                             },
-#                             "baz" => {
-#                                     default => 42,
-#                             },
-#              },
-#              command2 => {
-#                             ....
-#              },
-#});
-#
 
 
 sub name { return shift->{name} }
