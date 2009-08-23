@@ -54,3 +54,17 @@ Naturally, Rad's automatic help mechanism also forwards its output to post_proce
 You can also catch commandless calls to your program doing C<< if (!$c->cmd) >> and easily combine it with the example above.
 
 
+=head2 How do I disable the "help" command?
+
+The "help" command is registered by Rad automatically. To disable it, just unregister it at any point in your code (this is usually done at "setup"):
+
+   sub setup {
+       my $c = shift;
+       $c->unregister('help');
+       
+       # since you're overriding 'setup', make sure
+       # you register your App's commands!
+       $c->register_commands(); 
+   }
+
+
