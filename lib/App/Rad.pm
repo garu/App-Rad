@@ -198,11 +198,22 @@ sub _parse {
         if ( $arg =~ m/^\-([^\-\=]+)$/o) {
             my @args = split //, $1;
             foreach (@args) {
-                # TODO: _parse_arg should return the options' name
-                # and its "to_stash" values
+                # _parse_arg returns the options' name
+                # and its "to_stash" values as an arrayref,
+                # or undef and an error message.
+                # TODO: this is a horrible approach I took only
+                # because it's 4am and I'm in a rush to get it done.
+                # any attempts to rewrite the parser in order to
+                # improve it will be **much** appreciated. Thanks!
                 my ($opt, $to_stash) = ($_, undef);
-                ($opt, $to_stash) = $cmd_obj->_validate_arg($opt)
-                    if defined $cmd_obj;
+                if (defined $cmd_obj) {
+                    ($opt, $to_stash) = $cmd_obj->_parse_arg($opt);
+                    unless ($opt) {
+                        die "Error: $to_stash";
+                        # TODO x 2: this should be forwared to an
+                        # overridable help error handler or whatever
+                    }
+                }
 
                 $c->options->{$opt} = (defined $c->options->{$opt})
                                     ? $c->options->{$opt} + 1 
@@ -222,8 +233,13 @@ sub _parse {
             my ($key, $val) = ($1, (defined $2 ? $2 : 1));
             
             my $to_stash = undef;
-            ($key, $to_stash) = $cmd_obj->_validate_arg($key, $val)
-                if defined $cmd_obj;
+            # TODO: see above TODO :)
+            if (defined $cmd_obj) {
+                ($key, $to_stash) = $cmd_obj->_parse_arg($key, $val);
+                unless ($key) {
+                    die "Error: $to_stash";
+                }
+            }
             
             $c->options->{$key} = $val;
             foreach my $stash_key (@$to_stash) {
