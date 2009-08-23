@@ -4,6 +4,18 @@ use warnings;
 
 use Carp ();
 
+# yeah, I know, I know, this package needs some serious refactoring
+my %TYPES = (
+    'num' => sub { require Scalar::Util; 
+                return Scalar::Util::looks_like_number(shift)
+             }, 
+    'str' => sub { require Scalar::Util;
+                return !Scalar::Util::looks_like_number(shift)
+             },
+    'any' => sub { return 1 },
+);
+
+
 #TODO: improve this so it can be defined
 # as a standalone command?
 sub new {
@@ -69,9 +81,8 @@ sub set_arg {
             # stupid error checking
             my $opt_ref = ref $options->{$value};
             if ($value eq 'type') {
-                my %types = ( 'num' => qr{\d+}, 'str' => qr{.+});
-                Carp::croak "Invalid type\n"
-                    unless $opt_ref or $types{ lc $options->{$value} };
+                Carp::croak "Invalid type (should be 'num', 'str' or 'any')\n"
+                    unless $opt_ref or $TYPES{ lc $options->{$value} };
             }
             elsif ($value eq 'condition' and (!$opt_ref or $opt_ref ne 'CODE')) {
                 Carp::croak "'condition' attribute must be a CODE reference\n"
@@ -115,6 +126,153 @@ sub set_arg {
         $self->{args}->{$arg}->{help} = $options;
     }
 }
+
+sub _set_default_values {
+    my ($self, $options_ref, $stash_ref) = (@_);
+    
+    foreach my $arg ( keys %{$self->{args}} ) {
+        if (my $default = $self->{args}->{$arg}->{default}) {
+            
+            unless (defined $options_ref->{$arg}) {
+                $options_ref->{$arg} = $default;
+            
+                # if the argument has a to_stash value or hashref,
+                # we fill the stash.
+                if (my $stashed = $self->{args}->{$arg}->{to_stash}) {
+                    push my @keys, ref $stashed ? @{$stashed} : $arg;
+                    foreach (@keys) {
+                        $stash_ref->{$_} = $default;
+                    }
+                }
+            }
+        }
+    }
+}
+
+sub _validate_arg {
+    my ($self, $opt, $val) = (@_);
+    return $opt;
+}
+
+# _parse_arg should return the options' name
+# and its "to_stash" values
+# code here should probably be separated in different subs
+# for better segregation and testing
+sub _parse_arg {
+    my ($self, $token, $val) = (@_);
+
+    # short circuit
+    return ($token, undef) 
+        unless defined $self->{args};
+
+    # first we see if it's a valid arg
+    my $arg_ref = undef;
+    my $arg_real_name = $token;
+    if (defined $self->{args}->{$token}) {
+        $arg_ref = $self->{args}->{$token};
+    }
+    else {
+ALIAS_CHECK: # try to find if user given an alias instead
+        foreach my $valid_arg (keys %{$self->{args}}) {
+            
+            # get aliases list
+            my $aliases = $self->{args}->{$valid_arg}->{aliases};
+            $aliases = [$aliases] unless ref $aliases;
+
+            foreach my $alias (@{$aliases}) {
+                # get token if it's inside alias list,
+                if ($alias and $token eq $alias) {
+                    $arg_ref = $self->{args}->{$valid_arg};
+                    $arg_real_name = $valid_arg;
+                    last ALIAS_CHECK;
+                }
+            }
+        }
+    }
+    return (undef, "argument '$token' not accepted by command '" . $self->{name} . "'\n")
+        unless defined $arg_ref;
+    
+    # now that we have the argument name,
+    # we need to validate it.
+    if (defined $arg_ref->{type} ) {
+        if (not defined $val or not $TYPES{$arg_ref->{type}}->($val)) {
+            return (undef, "argument '$token' expects a (" . $arg_ref->{type} . ") value\n");
+        }
+    }
+    
+    # return argument and stash list ref
+    return ($arg_real_name, undef);
+}
+
+
+sub _parse_argument {
+    my ($self, $c, $arg) = (@_);
+    
+    # single option (could be grouped)
+    if ( $arg =~ m/^\-([^\-\=]+)$/o) {
+        my @args = split //, $1;
+        foreach (@args) {
+            if ($c->options->{$_}) {
+                $c->options->{$_}++;
+            }
+            else {
+                $c->options->{$_} = 1;
+            }
+        }
+    }
+    # long option: --name or --name=value
+    elsif ( $arg =~ m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
+        $c->options->{$1} = defined $2 ? $2 
+                          : 1
+                          ;
+    }
+    else {
+        push @{$c->argv}, $arg;
+    }
+}
+
+# returns 0 if argument spawned an error
+# returns 1 if argument was not parsed into $opt_ref
+# returns 2 if argument was parsed into $opt_ref
+#sub _parse_argument {
+#    my ($self, $opt_ref, $arg) = (@_);
+#    
+#    if ($self->args) {
+#        return 0; # TODO
+#    }
+#
+#    # always accept if we don't have any args specs.
+#    return $self->_tinygetopt($opt_ref, $arg);
+#}
+#
+#sub _tinygetopt {
+#    my ($self, $opt_ref, $arg) = (@_);
+#    
+#    # single option (could be grouped)
+#    if ( $arg =~ m{^\-([^\-\=]+)$}o) {
+#        my @args = split //, $1;
+#        foreach (@args) {
+#            if ($opt_ref->{$_}) {
+#                $opt_ref->{$_}++;
+#            }
+#            else {
+#                $opt_ref->{$_} = 1;
+#            }
+#        }
+#    }
+#    # long option: --name or --name=value
+#    elsif (m{^\-\-([^\-\=]+)(?:\=(.+))?$}o) {
+#        $opt_ref->{$1} = defined $2 ? $2 
+#                          : 1
+#                          ;
+#    }
+#    # unrecognized option, forwards to $c->argv
+#    else {
+#        return 1;
+#    }
+#    return 2;
+#}
+#
 #TODO: add arguments ***********************************************
 #$c->register_commands( {
 #              command1 => {
