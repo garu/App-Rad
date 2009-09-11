@@ -232,11 +232,6 @@ sub _parse {
         elsif ( $arg =~ m/^\-\-([^\-\=]+)(?:\=(.+))?$/o) {
             my ($key, $val) = ($1, (defined $2 ? $2 : 1));
             
-	    # al newkirk: when defaulting to a value of one, the type
-	    # if exists, must be changed to "num" avoid attempting to validate "1"
-	    # as "any" or "str" and failing.
-	    # see - App::Rad::Command::_parse_arg
-	    
             my $to_stash = undef;
             # TODO: see above TODO :)
             if (defined $cmd_obj) {

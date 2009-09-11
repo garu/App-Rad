@@ -1,0 +1,70 @@
+=head1 NAME
+
+App::Rad::FAQ - Frequently Asked Questions about Rad
+
+=head1 FREQUENTLY ASKED QUESTIONS
+
+=head2 How do I name my commands with the same name as reserved subs like "setup", "pre_process", etc?
+
+The fact that they are reserved subroutine names just means you don't get to call them that internally (i.e. I<inside> your code). You can still name your commands whatever you feel like with C<< $c->register >> or C<< $c->register_commands() >>:
+
+   sub setup {
+       my $c = shift;
+       $c->register_commands({ 'setup' => \&my_setup_command });
+   }
+   
+   sub my_setup_command {
+       ...
+   }
+
+
+=head2 I added a post_process and now my app does not show any help messages! What's wrong?
+
+B<Short answer:> If you wish to print anything returned by commands (including Rad's automatic 'help' command), make sure to call C<< $c->post_process >> at the end of your own post_process sub.
+
+B<Long answer:> As you may know, Rad stores returned values from commands on C<< $c->output >>, and leaves all output treatment to post_process. This enables you to manipulate the output of your commands as you see fit (such as mailing them, adding them to a database, parsing it into a specific format, etc). If you override post_process, you need to remember to actually print the output afterwards. This can easily be acomplished with:
+
+   if ($c->output) {
+       print $c->output . "\n";
+   }
+
+Since this is Rad's standard post_process, an easier (and perhaps more elegant) way of acomplishing the same result is simply calling C<< $c->post_process >> on the last line of your routine, like so:
+
+   sub post_process {
+       my $c = shift;
+
+       ...  # do your own processing
+
+       $c->post_process;
+   }
+
+Naturally, Rad's automatic help mechanism also forwards its output to post_process (so you can also manipulate it at will before printing). If you wish to selectively print C<< $c->output >> only if the command was 'help', you can do just that:
+
+  sub post_process {
+      my $c = shift;
+
+      if ($c->cmd eq 'help') {
+          print $c->output . "\n";
+      }
+      else {
+          # manipulate output at will
+      }
+  }
+
+You can also catch commandless calls to your program doing C<< if (!$c->cmd) >> and easily combine it with the example above.
+
+
+=head2 How do I disable the "help" command?
+
+The "help" command is registered by Rad automatically. To disable it, just unregister it at any point in your code (this is usually done at "setup"):
+
+   sub setup {
+       my $c = shift;
+       $c->unregister('help');
+       
+       # since you're overriding 'setup', make sure
+       # you register your App's commands!
+       $c->register_commands(); 
+   }
+
+

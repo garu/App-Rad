@@ -12,6 +12,8 @@ Revision history for App-Rad
 		Fixed bug where --option=0 was being set to 1 and not to 0, as expected (FCO)
 		Created experimental App::Rad::Tester to help testing apps created with Rad.
 		Updated documentation
+		
+		Added dynamic type setting for values that are set automatically [al newkirk]
 
 1.04	2009/05/04
 

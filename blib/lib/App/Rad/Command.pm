@@ -191,13 +191,6 @@ ALIAS_CHECK: # try to find if user given an alias instead
     # now that we have the argument name,
     # we need to validate it.
     if (defined $arg_ref->{type} ) {
-        
-        # al newkirk: when defaulting to a value of one, the type
-        # if exists, must be changed to "num" to avoid attempting to validate "1"
-        # as "any" or "str" and failing.
-        # ! Note: This changes the value for the duration of the request.
-        $arg_ref->{type} = "num" if $val eq "1";
-        
         if (not defined $val or not $TYPES{$arg_ref->{type}}->($val)) {
             return (undef, "argument '$token' expects a (" . $arg_ref->{type} . ") value\n");
         }
