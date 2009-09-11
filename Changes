@@ -2,11 +2,14 @@ Revision history for App-Rad
 
 1.05	2009/08/
 		*** API CHANGE *** 
-		$c->execute does not call 'default' or 'invalid'
-		commands anymore. Rad still does, but via parse_input. You don't have
-		to worry about it unless you make explicit calls to $c->execute.
+		$c->execute does not call 'default' or 'invalid' commands anymore if
+        it can't find the command name. Rad itself still does, but via 
+        parse_input. You don't have to worry about this unless you make 
+        explicit calls to $c->execute.
 		******************
-		
+	
+        $c->path and $c->realpath new auxiliary methods for giving you the
+        app's bin path and realbin path (via FindBin core module) - 
 		Added initial Shell-like behavior support via 'App::Rad->shell'
 		Added support for defining specific command arguments and its attributes (thanks ZOSO for suggesting, everybody at #app-rad for discussing its API, and FCO for implementing the first patch)
 		Fixed bug where --option=0 was being set to 1 and not to 0, as expected (FCO)

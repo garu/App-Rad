@@ -280,6 +280,15 @@ sub load_config {
     App::Rad::Config::load_config(@_);
 }
 
+sub path {
+    require FindBin;
+    return $FindBin::Bin;
+}
+
+sub real_path {
+    require FindBin;
+    return $FindBin::RealBin;
+}
 
 # - "Wow! you guys rock!" (zoso on Rad)
 #TODO: this code probably could use some optimization
