@@ -251,7 +251,7 @@ You can register a command in App::Rad in three diferent ways:
                      aliases   => [ 'len', 'l' ],
                      to_stash  => 'mylength',
                      required  => 1,
-                     help      => 'help for the lenght attribute',
+                     help      => 'help for the length attribute',
               }
         }
   )
