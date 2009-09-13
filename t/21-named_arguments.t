@@ -37,18 +37,47 @@ $c->register(
     }
 );
 
+
+# Testing incorrect arguments --------------------------------------------------------
+# Lack of required argument
 @ARGV = qw( cmd1 );
 eval { $c->parse_input; };
-ok( !$@, "test: no arguments" );
+is ($@, "Error: command 'cmd1' needs argument 'arg4'\n");
 
+# Lack of value in required argument
 @ARGV = qw( cmd1 --arg4 );
 eval { $c->parse_input };
-ok( !$@, "test: no explicit value, defaults to 1" );
+is ($@, "Error: argument 'arg4' requires a value of type 'str'\n");
 
 @ARGV = qw( cmd1 --arg2=42 );
 eval { $c->parse_input };
 ok( $@, "test: string value required" );
 
+# Condition returned false
+@ARGV = qw( cmd1 --arg4=somestring --arg1=43 );
+eval { $c->parse_input };
+is ($@, "Error: incorrect value for argument 'arg1': number must be below 42\n");
+
+# Conflicting arguments
+@ARGV = qw( cmd1 --arg4=somestring --arg1=40 --arg2 );
+eval { $c->parse_input };
+is ($@, "Error: you can't provide both 'arg1' and 'arg2'\n");
+
+# Condition returned false (using aliases)
+@ARGV = qw( cmd1 --arg4=somestring --a1=50 --arg2 );
+eval { $c->parse_input };
+is ($@, "Error: incorrect value for argument 'a1': number must be below 42\n");
+
+# Conflicting arguments (using aliases)
+@ARGV = qw( cmd1 --arg4=somestring --a1=40 --arg2 );
+eval { $c->parse_input };
+is ($@, "Error: you can't provide both 'arg1' and 'arg2'\n");
+
+# TODO: Conflicts with default values (how do you tell which one has been
+# passed?) --estebanm 20090830
+
+
+# Testing correct arguments ----------------------------------------------------------
 @ARGV = qw( cmd1 --arg2=foo );
 $c->parse_input;
 is_deeply( \@ARGV, ['--arg2=foo'], "test: mismatched parameters" );
