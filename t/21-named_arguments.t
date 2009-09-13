@@ -1,4 +1,4 @@
-use Test::More tests => 14;
+use Test::More tests => 17;
 use App::Rad::Tester;
 
 sub foo { }
@@ -13,7 +13,7 @@ $c->register(
             condition => sub { $_ < 42 },
             error_msg => 'number must be below 42',
             aliases   => [ 'a1', 'a3' ],
-            to_stash  => 'somearg',
+            to_stash  => ['somearg'],
             help      => 'help for --arg1',
         },
         'arg2' => {
@@ -32,76 +32,61 @@ $c->register(
             type     => 'str',
         },
         'arg5' => 'standard argument with help',
+        'arg6' => { to_stash => 'one' },
         -help  => 'help for cmd2',
     }
 );
 
-
 @ARGV = qw( cmd1 );
 eval { $c->parse_input; };
-ok( !$@,
-   "Test: command 'cmd1' no argument?\n"
-);
-
+ok( !$@, "test: no arguments" );
 
 @ARGV = qw( cmd1 --arg4 );
 eval { $c->parse_input };
-ok( !$@,
-    "Test: command 'cmd1' argument 'arg4' no explicit value, defaults to 1?\n"
-);
+ok( !$@, "test: no explicit value, defaults to 1" );
 
 @ARGV = qw( cmd1 --arg2=42 );
 eval { $c->parse_input };
-ok( $@,
-    "Test: command 'cmd1' argument 'arg2' requires a value of type 'str'?\n"
-);
+ok( $@, "test: string value required" );
 
 @ARGV = qw( cmd1 --arg2=foo );
 $c->parse_input;
-is_deeply( \@ARGV, ['--arg2=foo'],
-    "Test: command 'cmd1' argument 'arg2' parameters mismatched?\n"
-);
+is_deeply( \@ARGV, ['--arg2=foo'], "test: mismatched parameters" );
 
-is( $c->options->{arg2}, 'foo',
-    "Test: command 'cmd1' argument 'arg2' value mismatch(isn't 'foo')?\n"
-);
-
-# NOTE: AL NEWKIRK - STOPPED HERE - Test below dont work, functions have not been
-# implemented.
+is( $c->options->{arg2}, 'foo', "test: value mismatch (isn't 'foo')" );
 
 # we didn't die, so it's safe to test for arg3's default behavior
 @ARGV = qw( cmd1 --arg3 );
 $c->parse_input;
-is( $c->options->{arg3}, 42,
-    "Test: command 'cmd1' argument 'arg3' has proper default value?"
-);
-is( $c->stash->{one}, 42,
-    "Test: command 'cmd1' argument 'arg3' set stash value stash(1)"
-);
-is( $c->stash->{two}, 42,
-    "Test: command 'cmd1' argument 'arg3' set stash value stash(2)"
-);
+is( $c->options->{arg3}, 42, "test: proper default value" );
+is( $c->stash->{one},    42, "test: set stash value (1)" );
+is( $c->stash->{two},    42, "test: set stash value (2)" );
 
-
-@ARGV = qw( cmd1 --arg4=foo --arg3=meep );
+@ARGV = qw( cmd1 --arg2=foo --arg3=meep );
 $c->parse_input;
-#ok ()
-is ($c->options->{arg3}, 'meep', 'arg3 should have set a proper default value');
-is ($c->stash->{one}   , 'meep', 'arg3 stash value should be overriden(1)');
-is ($c->stash->{two}   , 'meep', 'arg3 stash value should be overriden(2)');
+is( $c->options->{arg3}, 'meep', 'test: set a proper default value' );
+is( $c->stash->{one},    'meep', 'test: override stash value(1)' );
+is( $c->stash->{two},    'meep', 'test: override stash value(2)' );
 
-@ARGV = qw( cmd1 --arg4=foo --arg5 );
+@ARGV = qw( cmd1 --arg3=foo --arg5 );
 $c->parse_input;
-is ($c->options->{arg5}, 1);
+is( $c->options->{arg5}, "", "test: another default value test" );
 
-@ARGV = qw( cmd1 --arg4=foo --arg5=bar );
-$c->parse_input;
-is ($c->options->{arg5}, 'bar');
+# test for alias support and conflict support
+@ARGV = qw( cmd1 --a1=33 --a2=bar );
+eval { $c->parse_input };
+ok( $@, "test: values that conflict" );
+is( $c->options->{arg1}, 33,    "test: alias value (1)" );
+is( $c->options->{arg2}, "bar", "test: alias value (2)" );
 
+@ARGV = qw( cmd1 --arg6=99 );
+eval { $c->parse_input };
+ok( !$@, "test: invalid to_stash option" );
 
 @ARGV = qw(cmd1 --baz);
 eval { $c->parse_input };
-is ($@, "Error: argument 'baz' not accepted by command 'cmd1'\n");
+ok( $@, "test: command not accepted" );
+
 
 # EOF
 

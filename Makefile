@@ -1,7 +1,7 @@
 # This Makefile is for the App::Rad extension to perl.
 #
 # It was generated automatically by MakeMaker version
-# 6.54 (Revision: 65400) from the contents of
+# 6.50 (Revision: 65000) from the contents of
 # Makefile.PL. Don't edit this file, edit Makefile.PL instead.
 #
 #       ANY CHANGES MADE HERE WILL BE LOST!
@@ -132,13 +132,12 @@ PERLRUNINST = $(PERLRUN) "-I$(INST_ARCHLIB)" "-I$(INST_LIB)"
 FULLPERLRUNINST = $(FULLPERLRUN) "-I$(INST_ARCHLIB)" "-I$(INST_LIB)"
 ABSPERLRUNINST = $(ABSPERLRUN) "-I$(INST_ARCHLIB)" "-I$(INST_LIB)"
 PERL_CORE = 0
-PERM_DIR = 755
 PERM_RW = 644
 PERM_RWX = 755
 
 MAKEMAKER   = C:/strawberry/perl/lib/ExtUtils/MakeMaker.pm
-MM_VERSION  = 6.54
-MM_REVISION = 65400
+MM_VERSION  = 6.50
+MM_REVISION = 65000
 
 # FULLEXT = Pathname for extension directory (eg Foo/Bar/Oracle).
 # BASEEXT = Basename part of FULLEXT. May be just equal FULLEXT. (eg Oracle)
@@ -226,7 +225,7 @@ PM_TO_BLIB = lib/App/Rad/Option.pm \
 
 
 # --- MakeMaker platform_constants section:
-MM_Win32_VERSION = 6.54
+MM_Win32_VERSION = 6.50
 
 
 # --- MakeMaker tool_autosplit section:
@@ -239,29 +238,27 @@ AUTOSPLITFILE = $(ABSPERLRUN)  -e "use AutoSplit;  autosplit($$ARGV[0], $$ARGV[1
 
 
 # --- MakeMaker tools_other section:
-CHMOD = $(ABSPERLRUN) -MExtUtils::Command -e "chmod" --
-CP = $(ABSPERLRUN) -MExtUtils::Command -e "cp" --
-MV = $(ABSPERLRUN) -MExtUtils::Command -e "mv" --
+CHMOD = $(ABSPERLRUN) -MExtUtils::Command -e chmod
+CP = $(ABSPERLRUN) -MExtUtils::Command -e cp
+MV = $(ABSPERLRUN) -MExtUtils::Command -e mv
 NOOP = rem
 NOECHO = @
-RM_F = $(ABSPERLRUN) -MExtUtils::Command -e "rm_f" --
-RM_RF = $(ABSPERLRUN) -MExtUtils::Command -e "rm_rf" --
-TEST_F = $(ABSPERLRUN) -MExtUtils::Command -e "test_f" --
-TOUCH = $(ABSPERLRUN) -MExtUtils::Command -e "touch" --
+RM_F = $(ABSPERLRUN) -MExtUtils::Command -e rm_f
+RM_RF = $(ABSPERLRUN) -MExtUtils::Command -e rm_rf
+TEST_F = $(ABSPERLRUN) -MExtUtils::Command -e test_f
+TOUCH = $(ABSPERLRUN) -MExtUtils::Command -e touch
 UMASK_NULL = umask 0
 DEV_NULL = > NUL
-MKPATH = $(ABSPERLRUN) -MExtUtils::Command -e "mkpath" --
-EQUALIZE_TIMESTAMP = $(ABSPERLRUN) -MExtUtils::Command -e "eqtime" --
-FALSE = $(ABSPERLRUN)  -e "exit 1" --
-TRUE = $(ABSPERLRUN)  -e "exit 0" --
+MKPATH = $(ABSPERLRUN) "-MExtUtils::Command" -e mkpath
+EQUALIZE_TIMESTAMP = $(ABSPERLRUN) "-MExtUtils::Command" -e eqtime
 ECHO = $(ABSPERLRUN) -l -e "print qq{{@ARGV}" --
 ECHO_N = $(ABSPERLRUN)  -e "print qq{{@ARGV}" --
 UNINST = 0
 VERBINST = 0
-MOD_INSTALL = $(ABSPERLRUN) -MExtUtils::Install -e "install([ from_to => {{@ARGV}, verbose => '$(VERBINST)', uninstall_shadows => '$(UNINST)', dir_mode => '$(PERM_DIR)' ]);" --
-DOC_INSTALL = $(ABSPERLRUN) -MExtUtils::Command::MM -e "perllocal_install" --
-UNINSTALL = $(ABSPERLRUN) -MExtUtils::Command::MM -e "uninstall" --
-WARN_IF_OLD_PACKLIST = $(ABSPERLRUN) -MExtUtils::Command::MM -e "warn_if_old_packlist" --
+MOD_INSTALL = $(ABSPERLRUN) -MExtUtils::Install -e "install({{@ARGV}, '$(VERBINST)', 0, '$(UNINST)');" --
+DOC_INSTALL = $(ABSPERLRUN) "-MExtUtils::Command::MM" -e perllocal_install
+UNINSTALL = $(ABSPERLRUN) "-MExtUtils::Command::MM" -e uninstall
+WARN_IF_OLD_PACKLIST = $(ABSPERLRUN) "-MExtUtils::Command::MM" -e warn_if_old_packlist
 MACROSTART = 
 MACROEND = 
 USEMAKEFILE = -f
@@ -358,42 +355,42 @@ blibdirs.ts : blibdirs
 
 $(INST_LIBDIR)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_LIBDIR)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_LIBDIR)
+	$(NOECHO) $(CHMOD) 755 $(INST_LIBDIR)
 	$(NOECHO) $(TOUCH) $(INST_LIBDIR)$(DFSEP).exists
 
 $(INST_ARCHLIB)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_ARCHLIB)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_ARCHLIB)
+	$(NOECHO) $(CHMOD) 755 $(INST_ARCHLIB)
 	$(NOECHO) $(TOUCH) $(INST_ARCHLIB)$(DFSEP).exists
 
 $(INST_AUTODIR)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_AUTODIR)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_AUTODIR)
+	$(NOECHO) $(CHMOD) 755 $(INST_AUTODIR)
 	$(NOECHO) $(TOUCH) $(INST_AUTODIR)$(DFSEP).exists
 
 $(INST_ARCHAUTODIR)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_ARCHAUTODIR)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_ARCHAUTODIR)
+	$(NOECHO) $(CHMOD) 755 $(INST_ARCHAUTODIR)
 	$(NOECHO) $(TOUCH) $(INST_ARCHAUTODIR)$(DFSEP).exists
 
 $(INST_BIN)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_BIN)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_BIN)
+	$(NOECHO) $(CHMOD) 755 $(INST_BIN)
 	$(NOECHO) $(TOUCH) $(INST_BIN)$(DFSEP).exists
 
 $(INST_SCRIPT)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_SCRIPT)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_SCRIPT)
+	$(NOECHO) $(CHMOD) 755 $(INST_SCRIPT)
 	$(NOECHO) $(TOUCH) $(INST_SCRIPT)$(DFSEP).exists
 
 $(INST_MAN1DIR)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_MAN1DIR)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_MAN1DIR)
+	$(NOECHO) $(CHMOD) 755 $(INST_MAN1DIR)
 	$(NOECHO) $(TOUCH) $(INST_MAN1DIR)$(DFSEP).exists
 
 $(INST_MAN3DIR)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_MAN3DIR)
-	$(NOECHO) $(CHMOD) $(PERM_DIR) $(INST_MAN3DIR)
+	$(NOECHO) $(CHMOD) 755 $(INST_MAN3DIR)
 	$(NOECHO) $(TOUCH) $(INST_MAN3DIR)$(DFSEP).exists
 
 
@@ -532,7 +529,7 @@ metafile : create_distdir
 	$(NOECHO) $(ECHO) "    directory:" >> META_new.yml
 	$(NOECHO) $(ECHO) "        - t" >> META_new.yml
 	$(NOECHO) $(ECHO) "        - inc" >> META_new.yml
-	$(NOECHO) $(ECHO) "generated_by:       ExtUtils::MakeMaker version 6.54" >> META_new.yml
+	$(NOECHO) $(ECHO) "generated_by:       ExtUtils::MakeMaker version 6.50" >> META_new.yml
 	$(NOECHO) $(ECHO) "meta-spec:" >> META_new.yml
 	$(NOECHO) $(ECHO) "    url:      http://module-build.sourceforge.net/META-spec-v1.4.html" >> META_new.yml
 	$(NOECHO) $(ECHO) "    version:  1.4" >> META_new.yml
@@ -644,16 +641,16 @@ distsignature : create_distdir
 
 # --- MakeMaker install section:
 
-install :: pure_install doc_install
+install :: all pure_install doc_install
 	$(NOECHO) $(NOOP)
 
-install_perl :: pure_perl_install doc_perl_install
+install_perl :: all pure_perl_install doc_perl_install
 	$(NOECHO) $(NOOP)
 
-install_site :: pure_site_install doc_site_install
+install_site :: all pure_site_install doc_site_install
 	$(NOECHO) $(NOOP)
 
-install_vendor :: pure_vendor_install doc_vendor_install
+install_vendor :: all pure_vendor_install doc_vendor_install
 	$(NOECHO) $(NOOP)
 
 pure_install :: pure_$(INSTALLDIRS)_install
@@ -668,7 +665,7 @@ pure__install : pure_site_install
 doc__install : doc_site_install
 	$(NOECHO) $(ECHO) INSTALLDIRS not defined, defaulting to INSTALLDIRS=site
 
-pure_perl_install :: all
+pure_perl_install ::
 	$(NOECHO) $(MOD_INSTALL) \
 		read $(PERL_ARCHLIB)\auto\$(FULLEXT)\.packlist \
 		write $(DESTINSTALLARCHLIB)\auto\$(FULLEXT)\.packlist \
@@ -682,7 +679,7 @@ pure_perl_install :: all
 		$(SITEARCHEXP)\auto\$(FULLEXT)
 
 
-pure_site_install :: all
+pure_site_install ::
 	$(NOECHO) $(MOD_INSTALL) \
 		read $(SITEARCHEXP)\auto\$(FULLEXT)\.packlist \
 		write $(DESTINSTALLSITEARCH)\auto\$(FULLEXT)\.packlist \
@@ -695,7 +692,7 @@ pure_site_install :: all
 	$(NOECHO) $(WARN_IF_OLD_PACKLIST) \
 		$(PERL_ARCHLIB)\auto\$(FULLEXT)
 
-pure_vendor_install :: all
+pure_vendor_install ::
 	$(NOECHO) $(MOD_INSTALL) \
 		read $(VENDORARCHEXP)\auto\$(FULLEXT)\.packlist \
 		write $(DESTINSTALLVENDORARCH)\auto\$(FULLEXT)\.packlist \
@@ -706,7 +703,7 @@ pure_vendor_install :: all
 		$(INST_MAN1DIR) $(DESTINSTALLVENDORMAN1DIR) \
 		$(INST_MAN3DIR) $(DESTINSTALLVENDORMAN3DIR)
 
-doc_perl_install :: all
+doc_perl_install ::
 	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
 	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
 	-$(NOECHO) $(DOC_INSTALL) \
@@ -717,7 +714,7 @@ doc_perl_install :: all
 		EXE_FILES "$(EXE_FILES)" \
 		>> $(DESTINSTALLARCHLIB)\perllocal.pod
 
-doc_site_install :: all
+doc_site_install ::
 	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
 	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
 	-$(NOECHO) $(DOC_INSTALL) \
@@ -728,7 +725,7 @@ doc_site_install :: all
 		EXE_FILES "$(EXE_FILES)" \
 		>> $(DESTINSTALLARCHLIB)\perllocal.pod
 
-doc_vendor_install :: all
+doc_vendor_install ::
 	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
 	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
 	-$(NOECHO) $(DOC_INSTALL) \
@@ -774,7 +771,7 @@ $(FIRST_MAKEFILE) : Makefile.PL $(CONFIGDEP)
 	$(PERLRUN) Makefile.PL 
 	$(NOECHO) $(ECHO) "==> Your Makefile has been rebuilt. <=="
 	$(NOECHO) $(ECHO) "==> Please rerun the $(MAKE) command.  <=="
-	$(FALSE)
+	false
 
 
 
@@ -826,18 +823,20 @@ testdb_static :: testdb_dynamic
 # --- MakeMaker ppd section:
 # Creates a PPD (Perl Package Description) for a binary distribution.
 ppd :
-	$(NOECHO) $(ECHO) "<SOFTPKG NAME=\"$(DISTNAME)\" VERSION=\"1.04\">" > $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "<SOFTPKG NAME=\"$(DISTNAME)\" VERSION=\"1,04,0,0\">" > $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "    <TITLE>$(DISTNAME)</TITLE>" >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) "    <ABSTRACT>Rapid (and easy!) creation of command line applications</ABSTRACT>" >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) "    <AUTHOR>Breno G. de Oliveira &lt;garu at cpan.org&gt;</AUTHOR>" >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) "    <IMPLEMENTATION>" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <REQUIRE NAME=\"Attribute::Handlers\" />" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <REQUIRE NAME=\"B::Deparse\" />" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <REQUIRE NAME=\"Carp::\" />" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <REQUIRE NAME=\"File::Temp\" />" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <REQUIRE NAME=\"FindBin::\" />" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <REQUIRE NAME=\"Getopt::Long\" VERSION=\"2.36\" />" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <REQUIRE NAME=\"Test::More\" />" >> $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) "        <ARCHITECTURE NAME=\"MSWin32-x86-multi-thread-5.10\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <DEPENDENCY NAME=\"Attribute-Handlers\" VERSION=\"0,0,0,0\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <DEPENDENCY NAME=\"B-Deparse\" VERSION=\"0,0,0,0\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <DEPENDENCY NAME=\"Carp\" VERSION=\"0,0,0,0\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <DEPENDENCY NAME=\"File-Temp\" VERSION=\"0,0,0,0\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <DEPENDENCY NAME=\"FindBin\" VERSION=\"0,0,0,0\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <DEPENDENCY NAME=\"Getopt-Long\" VERSION=\"2,36,0,0\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <DEPENDENCY NAME=\"Test-More\" VERSION=\"0,0,0,0\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <OS NAME=\"$(OSNAME)\" />" >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) "        <ARCHITECTURE NAME=\"MSWin32-x86-multi-thread-5.1\" />" >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) "        <CODEBASE HREF=\"\" />" >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) "    </IMPLEMENTATION>" >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) "</SOFTPKG>" >> $(DISTNAME).ppd
@@ -845,8 +844,8 @@ ppd :
 
 # --- MakeMaker pm_to_blib section:
 
-pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
-	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e "pm_to_blib({{@ARGV}, '$(INST_LIB)\auto', q[$(PM_FILTER)], '$(PERM_DIR)')" -- \
+pm_to_blib : $(TO_INST_PM)
+	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e "pm_to_blib({{@ARGV}, '$(INST_LIB)\auto', '$(PM_FILTER)')" -- \
 	  lib/App/Rad/Option.pm blib\lib\App\Rad\Option.pm \
 	  lib/App/Rad/Include.pm blib\lib\App\Rad\Include.pm \
 	  lib/App/Rad/FAQ.pod blib\lib\App\Rad\FAQ.pod \
