@@ -9,10 +9,7 @@ my %TYPES = (
     'num' => sub { require Scalar::Util; 
                 return Scalar::Util::looks_like_number(shift)
              }, 
-    'str' => sub { require Scalar::Util;
-                return !Scalar::Util::looks_like_number(shift)
-             },
-    'any' => sub { return 1 },
+    'str' => sub { return 1 },
 );
 
 
