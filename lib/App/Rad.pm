@@ -733,7 +733,7 @@ That's it, your program already works and you can use it directly via the comman
 Next, start creating your own functions (e.g.) inside I<myapp.pl>:
 
     sub hello {
-	return "Hello, World!";
+        return "Hello, World!";
     }
 
 And now your simple command line program I<myapp.pl> has a 'hello' command!
@@ -754,7 +754,7 @@ You could easily add a customized help message for your command through the 'Hel
     sub hello 
     :Help(give a nice compliment)
     {
-	return "Hello, World!";
+        return "Hello, World!";
     }
 
 And then, as expected:
@@ -773,19 +773,19 @@ App::Rad also lets you expand your applications, providing a lot of flexibility 
     App::Rad->run();
 
     sub setup {
-	my $c = shift;
+        my $c = shift;
 
-	$c->register_commands( {
-		foo => 'expand your foo!',
-		bar => 'have a drink! arguments: --drink=DRINK',
+        $c->register_commands( {
+            foo => 'expand your foo!',
+            bar => 'have a drink! arguments: --drink=DRINK',
 	    });
     }
 
     sub foo {
-	my $c = shift;
-	$c->load_config('myapp.conf');
+        my $c = shift;
+        $c->load_config('myapp.conf');
 
-	return 'foo expanded to ' . baz() * $c->config->{'myfoo'};
+        return 'foo expanded to ' . baz() * $c->config->{'myfoo'};
     }
 
     # note that 'baz' was not registered as a command,
@@ -793,13 +793,13 @@ App::Rad also lets you expand your applications, providing a lot of flexibility 
     sub baz { rand(10) }
 
     sub bar {
-	my $c = shift;
-	if ( $c->options->{'drink'} ) {
-	    return 'you asked for a ' . $c->options->{'drink'};
-	}
-	else {
-	    return 'you need to ask for a drink';
-	}
+        my $c = shift;
+        if ( $c->options->{'drink'} ) {
+            return 'you asked for a ' . $c->options->{'drink'};
+        }
+        else {
+            return 'you need to ask for a drink';
+        }
     }
 
 	
@@ -876,7 +876,7 @@ You can also display specific embedded help for your commands, either explicitly
     sub mycmd 
     :Help(display a nice welcome message) 
     {
-	return "Welcome!";
+        return "Welcome!";
     }
 
 the associated help text would go like this:
@@ -924,20 +924,20 @@ That's it! Now myapp.pl has the 'addcsvcol' command (granted, not the best name)
 App::Rad not only transforms and adjusts your one-liner so it can be used inside your program, but also automatically formats it with Perl::Tidy (if you have it). This is what the one-liner above would look like inside your program:
 
     sub addcsvcol {
-	my $c = shift;
+        my $c = shift;
     
-	local ($^I) = "";
-	local ($/)  = "\n";
-	local ($\)  = "\n";
-      LINE: while ( defined( $_ = <ARGV> ) ) {
-	    chomp $_;
-	    our (@F) = split( /,/, $_, 0 );
-	    splice @F, 1, 0, $.;
-	    $_ = join( ',', @F );
-	}
-	continue {
-	    die "-p destination: $!\n" unless print $_;
-	}
+        local ($^I) = "";
+        local ($/)  = "\n";
+        local ($\)  = "\n";
+        LINE: while ( defined( $_ = <ARGV> ) ) {
+            chomp $_;
+            our (@F) = split( /,/, $_, 0 );
+            splice @F, 1, 0, $.;
+            $_ = join( ',', @F );
+        }
+        continue {
+            die "-p destination: $!\n" unless print $_;
+        }
     }
 
 With so many arguments (-i, -p, -a -F,, -l -e), this is about as bad as it gets. And still one might find this way easier to document and mantain than a crude one-liner stored in your ~/.bash_history or similar.
@@ -984,13 +984,13 @@ Single-letter option. Translates C<< -p >> into C<< $c->options->{p} >>.
 Single-letter options can be nested together, so C<-abc> will be parsed into C<< $c->options->{a} >>, C<< $c->options->{b} >> and C<< $c->options{c} >>, while C<--abc> will be parsed into C<< $c->options->{abc} >>. We could, for instance, create a dice-rolling command like this:
 
     sub roll {
-	my $c = shift;
+        my $c = shift;
 
-	my $value = 0;
-	for ( 1..$c->options->{'times'} ) {
-	    $value += ( int(rand ($c->options->{'faces'}) + 1));
-	}
-	return $value;
+        my $value = 0;
+        for ( 1..$c->options->{'times'} ) {
+            $value += ( int(rand ($c->options->{'faces'}) + 1));
+        }
+        return $value;
     }
 
 And now you can call your 'roll' command like:
@@ -1019,13 +1019,13 @@ The array reference C<< $c->argv >> contains every argument passed to your comma
 App::Rad is also smoothly integrated with Getopt::Long, so you can have even more flexibility and power while parsing your command's arguments, such as aliases and types. Call the C<< $c->getopt() >> method anytime inside your commands (or just once in your "pre_process" function to always have the same interface) passing a simple array with your options, and refer back to $c->options to see them. For instance: 
 
     sub roll {
-	my $c = shift;
+        my $c = shift;
 
-	$c->getopt( 'faces|f=i', 'times|t=i' )
-	    or $c->execute('usage') and return undef;
+        $c->getopt( 'faces|f=i', 'times|t=i' )
+            or $c->execute('usage') and return undef;
 
-	# and now you have $c->options->{'faces'} 
-	# and $c->options->{'times'} just like above.
+        # and now you have $c->options->{'faces'} 
+        # and $c->options->{'times'} just like above.
     }
 
 This becomes very handy for complex or feature-rich commands. Please refer to the Getopt::Long module for more usage examples.
@@ -1059,24 +1059,24 @@ The "stash" is a universal hash for storing data among your Commands:
 You can use it for more granularity and control over your program. For instance, you can email the output of a command if (and only if) something happened:
 
     sub command {
-	my $c = shift;
-	my $ret = do_something();
+        my $c = shift;
+        my $ret = do_something();
 
-	if ( $ret =~ /critical error/ ) {
-	    $c->stash->{mail} = 1;
-	}
-	return $ret;
+        if ( $ret =~ /critical error/ ) {
+            $c->stash->{mail} = 1;
+        }
+        return $ret;
     }
 
     sub post_process {
-	my $c = shift;
+        my $c = shift;
 
-	if ( $c->stash->{mail} ) {
-	    # send email alert...
-	}
-	else {
-	    print $c->output . "\n";
-	}
+        if ( $c->stash->{mail} ) {
+            # send email alert...
+        }
+        else {
+            print $c->output . "\n";
+        }
     }
 
 
@@ -1152,10 +1152,10 @@ Registers a coderef as a callable command. Note that you don't have to call this
 It is also very useful for creating aliases for your commands:
 
     sub setup {
-	my $c = shift;
-	$c->register_commands();
+        my $c = shift;
+        $c->register_commands();
 
-	$c->register('myalias', \&command);
+        $c->register('myalias', \&command);
     }
 
     sub command { return "Hi!" }
@@ -1190,10 +1190,10 @@ The code above will register B<only> the subs C<foo>, C<bar> and C<baz> as comma
 =head3 Adding single commands (with inline help)
 
     $c->register_commands(
-	    {
-		dos2unix => 'convert text files from DOS to Unix format',
-		unix2dos => 'convert text files from Unix to DOS format',
-	    }
+        {
+            dos2unix => 'convert text files from DOS to Unix format',
+            unix2dos => 'convert text files from Unix to DOS format',
+        }
     );
 
 You can pass a hash reference containing commands as keys and a small help string as their values. The code above will register B<only> the subs C<dos2unix> and C<unix2dos>, and the default help for your program will become something like this:
@@ -1227,8 +1227,8 @@ For example:
     App::Rad->run();
 
     sub setup { 
-	my $c = shift; 
-	$c->register_commands( { -ignore_prefix => '_' } );
+        my $c = shift; 
+        $c->register_commands( { -ignore_prefix => '_' } );
     }
 
     sub foo  {}  # will become a command
@@ -1263,11 +1263,11 @@ You can even bundle the hash reference to include your C<< cmd => help >> and sp
 
     # this behaves the same way as the code above:
     $c->register_commands(
-	'foo',
-	{ 
-	    -ignore_suffix => 'foo',
-	    bar => 'all your command line are belong to us',
-	}
+        'foo',
+        { 
+            -ignore_suffix => 'foo',
+            bar => 'all your command line are belong to us',
+        }
     );
 
 
@@ -1319,14 +1319,14 @@ you can write something like this:
     App::Rad->run();
 
     sub setup {
-	my $c = shift;
-	$c->register_commands();
+        my $c = shift;
+        $c->register_commands();
 
-	# EUID is 'root'
-	if ( $> == 0 ) {
-	    $c->register('include', \&App::Rad::include);
-	    $c->register('exclude', \&App::Rad::exclude);
-	}
+        # EUID is 'root'
+        if ( $> == 0 ) {
+            $c->register('include', \&App::Rad::include);
+            $c->register('exclude', \&App::Rad::exclude);
+        }
     }
 
 to get something like this:
@@ -1354,10 +1354,10 @@ If no command is given to your application, it will fall in here. Please note th
 Default's default (grin) is just an alias for the help command.
 
     sub default {
-	my $c = shift;
+        my $c = shift;
 
-	# will fall here if no command is issued
-	# or if an invalid command is called (see below)
+        # will fall here if no command is issued
+        # or if an invalid command is called (see below)
     }
 
 You are free (and encouraged) to change the default behavior to whatever you want. This is rather useful for when your program will only do one thing, and as such it receives only parameters instead of command names. In those cases, use the "C<< default() >>" sub as your main program's sub and parse the parameters with C<< $c->argv >> and C<< $c->getopt >> as you would in any other command.
@@ -1376,11 +1376,11 @@ If implemented, this function is called automatically after your application run
 If implemented, this function is called automatically right before the actual wanted command is called. This way you have an optional pre-run hook, which permits functionality to be added, such as preventing some commands to be run from a specific uid (e.g. I<root>): 
 
     sub pre_process {
-	my $c = shift;
+        my $c = shift;
 
-	if ( $c->cmd eq 'some_command' and $> != 0 ) {
-	    $c->cmd = 'default'; # or some standard error message
-	}
+        if ( $c->cmd eq 'some_command' and $> != 0 ) {
+            $c->cmd = 'default'; # or some standard error message
+        }
     }
     
 
@@ -1389,11 +1389,11 @@ If implemented, this function is called automatically right before the actual wa
 If implemented, this function is called automatically right after the requested function returned. It receives the Controller object right after a given command has been executed (and hopefully with some output returned), so you can manipulate it at will. In fact, the default "post_process" function is as goes:
 
     sub post_process {
-	my $c = shift;
+        my $c = shift;
 
-	if ( $c->output ) {
-	    print $c->output . "\n";
-	}
+        if ( $c->output ) {
+            print $c->output . "\n";
+        }
     }
 
 You can override this function to include a default header/footer for your programs (either a label or perhaps a "Content-type: " string), parse the output in any ways you see fit (CPAN is your friend, as usual), etc.
