@@ -155,7 +155,7 @@ sub _set_default_values {
 # code here should probably be separated in different subs
 # for better segregation and testing
 sub _parse_arg {
-    my ($self, $token, $val) = (@_);
+    my ($self, $token, $val, $c) = (@_);
 
     # short circuit
     return ($token, undef) 
@@ -186,13 +186,34 @@ ALIAS_CHECK: # try to find if user given an alias instead
         }
     }
     return (undef, "argument '$token' not accepted by command '" . $self->{name} . "'\n")
-        unless defined $arg_ref;
+        unless keys %{$arg_ref}; # al newkirk: changed from defined $arg_ref
     
     # now that we have the argument name,
     # we need to validate it.
     if (defined $arg_ref->{type} ) {
+        
+        # al newkirk: when defaulting to a value of one, the type
+        # if exists, must be changed to "num" to avoid attempting to validate "1"
+        # as "any" or "str" and failing.
+        # ! Note: This changes the value for the duration of the request.
+        $arg_ref->{type} = "num" if $val eq "1";
+        
         if (not defined $val or not $TYPES{$arg_ref->{type}}->($val)) {
             return (undef, "argument '$token' expects a (" . $arg_ref->{type} . ") value\n");
+        }
+    }
+    
+    # al newkirk: arg option to_stash support
+    # current to_stash values must be in arrayref format [...]
+    if ( defined $self->{args}->{$arg_real_name}->{to_stash} ) {
+        if ( ref $self->{args}->{$arg_real_name}->{to_stash} eq "ARRAY" ) {
+            foreach my $var ( @{ $self->{args}->{$arg_real_name}->{to_stash} } ) {
+                $c->stash->{$var} = $val;
+            }
+        }
+        else {
+            die
+              "Error: $token to_stash option exists but contains an invalid value";
         }
     }
     

@@ -6,6 +6,8 @@ core:
     - tests for new features (options)
     - more examples in /examples
     - improving shell and abbrev plugin
+    - maybe an error/exception handling class [al newkirk]
+    - maybe a cmd usage help guide can be thrown on error
 
 
 plugins:
