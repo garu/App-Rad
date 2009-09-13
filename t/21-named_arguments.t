@@ -33,6 +33,7 @@ $c->register(
         },
         'arg5' => 'standard argument with help',
         'arg6' => { to_stash => 'one' },
+        'arg7' => { type => 'num' },
         -help  => 'help for cmd2',
     }
 );
@@ -49,9 +50,10 @@ is ($@, "Error: command 'cmd1' needs argument 'arg4'\n");
 eval { $c->parse_input };
 is ($@, "Error: argument 'arg4' requires a value of type 'str'\n");
 
-@ARGV = qw( cmd1 --arg2=42 );
+# wrong type in argument arg7
+@ARGV = qw( cmd1 --arg2=42 --arg7=foo);
 eval { $c->parse_input };
-ok( $@, "test: string value required" );
+is( $@, "Error: argument 'arg7' requires a value of type 'str'\n" );
 
 # Condition returned false
 @ARGV = qw( cmd1 --arg4=somestring --arg1=43 );
