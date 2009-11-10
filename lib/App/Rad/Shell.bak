@@ -43,19 +43,19 @@ sub shell {
 
 	# dirty hack to override 'default' function
 	$c->{'_functions'}->{'default'} = sub {};
-	$c->{'_functions'}->{'invalid'} = sub { return "Invalid command. Type help; for a list of commands." };
+	$c->{'_functions'}->{'invalid'} = sub { return "Invalid command. Type 'help' for a list of commands" };
 
     # this is *before* setup() because the application
     # developer might want to modify the command.
     $c->register('quit', \&quit, 'exits the shell');
-    $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands.');
+    $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands');
     # EXPERIMENTAL - Al Newkirk (awnstudio)
     # clear shell buffer
     $c->register('clear', sub {
 	my $c = shift;
 	my $clr = $^O =~ /[Ww]in(32)?/ ? "cls" : "clear";
 	system($clr);
-	return "Type help; for a list of available commands.";
+	print "Type help, for a list of available commands.", "\n\n";
     }, 'clear the shell buffer');
     
     # then we run the setup to register
@@ -63,8 +63,7 @@ sub shell {
     $c->{'_functions'}->{'setup'}->($c);
     
     # print startup message - Al Newkirk (awnstudio)
-    print "Type help; for a list of available commands, and q; to quit.\n";
-    print "Execute commands [w/ or wo/ options] using a ; at the end of the line.\n";
+    print "Type help, for a list of available commands.", "\n\n";
     
     # EXPERIMENTAL - Al Newkirk (awnstudio)
     # create synonyms for quit :)
@@ -80,15 +79,14 @@ sub shell {
     do {
 	print $c->{'_shell'}->{'prompt'};
         # get command and options - Al Newkirk (awnstudio)
-	my $cmd  = join " ", split /\s+/, <>;
-	my @opts = ();
+	my ($cmd, @opts) = split /\s+/, <>;
 	if ($cmd) {
-	    if ($cmd =~ /\;(\s+)?$/) {
+	    if ($cmd =~ /\;(\s+)?$/ xor (@opts && ($opts[0] =~ /\;(\s+)?$/ xor $opts[$#opts] =~ /\;(\s+)?$/))) {
 		
 		# what kind of multiline?
 		if ($multiline_read) {
 		    # build command
-		    ($cmd, @opts) = @multiline_buffer;
+		    ($cmd, @opts) = split /\s/, @multiline_buffer;
 		    # reset 
 		    $c->{'_shell'}->{'prompt'} = "$prompt> ";
 		    $multiline_read   = 0;
@@ -96,26 +94,25 @@ sub shell {
 		}
 		
 		$cmd =~ s/\;$//;
-		$opts[$#opts] =~ s/\;(\s+)?$// if @opts;
 		
 		# process commands
 		if (defined $c->{_commands}->{$cmd}) {
-		    print $c->{_commands}->{$cmd}->run($c), "\n";
+		    $c->{_commands}->{$cmd}->run($c);
+		    print "executed...\n";
 		    #$c->_get_input();
 		    #$c->execute();
 		}
 		else {
-		    print $c->{'_functions'}->{'invalid'}->(), "\n";
+		    print "Error, the command \"$cmd\" is not available.\n";
+		    print "Need help? Type \"help\"\n";
 		}
 		
 	    }
 	    else {
-		my $mlp =
-		    $c->{'_shell'}->{'prompt'} =
-			("." x length($prompt)) . "> ";
-		$cmd =~ s/^$mlp//;
-		push @multiline_buffer, split /\s+/, $cmd;
-		$multiline_read = 1;
+		push (@multiline_buffer, $cmd) if $cmd &&
+		    $cmd ne $c->{'_shell'}->{'prompt'};
+		push (@multiline_buffer, @opts)if @opts;
+		$c->{'_shell'}->{'prompt'} = ("." x length($prompt)) . "> ";
 	    }
 	}
     } 	while (1);
