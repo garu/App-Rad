@@ -37,7 +37,7 @@ sub shell {
     
         #TODO    
     }
-#    $c->{'_shell'} = %{ shift() };
+    # $c->{'_shell'} = %{ shift() };
     $c->_init();
     $c->_register_functions();
 
@@ -55,12 +55,15 @@ sub shell {
     # some commands
     $c->{'_functions'}->{'setup'}->($c);
     
+    # print startup message - Al Newkirk (awnstudio)
+    print "Type help, for a list of available commands.", "\n\n";
+    
     do {
-		print $c->{'_shell'}->{'prompt'};
+	print $c->{'_shell'}->{'prompt'};
         @ARGV = split /\s+/, <>;
         $c->_get_input();
         $c->execute();
-    } while (1);
+    } 	while (1);
 }
 
 sub quit {
@@ -70,6 +73,7 @@ sub quit {
 }
 
 42;
+
 __END__
 
 =head1 NAME
