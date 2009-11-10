@@ -49,13 +49,13 @@ sub shell {
     # developer might want to modify the command.
     $c->register('quit', \&quit, 'exits the shell');
     $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands.');
+    
     # EXPERIMENTAL - Al Newkirk (awnstudio)
     # clear shell buffer
     $c->register('clear', sub {
 	my $c = shift;
 	my $clr = $^O =~ /[Ww]in(32)?/ ? "cls" : "clear";
 	system($clr);
-	return "Type help; for a list of available commands.";
     }, 'clear the shell buffer');
     
     # then we run the setup to register
@@ -63,8 +63,15 @@ sub shell {
     $c->{'_functions'}->{'setup'}->($c);
     
     # print startup message - Al Newkirk (awnstudio)
-    print "Type help; for a list of available commands, and q; to quit.\n";
-    print "Execute commands [w/ or wo/ options] using a ; at the end of the line.\n";
+    sub startup_message {
+	my $ref = shift;
+	my $startup_message = "".
+	    "$ref->{title}\n" if defined $ref->{title};
+	return ($startup_message || "") . 
+	    "Type help; for a list of available commands, and q; to quit.\n" .
+	    "Execute commands [w/ or wo/ options] using a ; at the end of the line.\n";
+    }
+    print startup_message($params_ref);
     
     # EXPERIMENTAL - Al Newkirk (awnstudio)
     # create synonyms for quit :)
@@ -100,9 +107,16 @@ sub shell {
 		
 		# process commands
 		if (defined $c->{_commands}->{$cmd}) {
-		    print $c->{_commands}->{$cmd}->run($c), "\n";
-		    #$c->_get_input();
-		    #$c->execute();
+		    # hack for clear buffer function - Al Newkirk (awnstudio)
+		    if (lc($cmd) eq "clear") {
+			$c->{_commands}->{$cmd}->run($c);
+			print startup_message($params_ref);
+		    }
+		    else {
+			#$c->_get_input();
+			#$c->execute();
+			print $c->{_commands}->{$cmd}->run($c), "\n";
+		    }
 		}
 		else {
 		    print $c->{'_functions'}->{'invalid'}->(), "\n";
