@@ -49,7 +49,14 @@ sub shell {
     # developer might want to modify the command.
     $c->register('quit', \&quit, 'exits the shell');
     $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands');
-
+    # EXPERIMENTAL - Al Newkirk (awnstudio)
+    # clear shell buffer
+    $c->register('clear', sub {
+	my $c = shift;
+	my $clr = $^O =~ /[Ww]in(32)?/ ? "cls" : "clear";
+	system($clr);
+	print "Type help, for a list of available commands.", "\n\n";
+    }, 'clear the shell buffer');
     
     # then we run the setup to register
     # some commands
@@ -58,11 +65,28 @@ sub shell {
     # print startup message - Al Newkirk (awnstudio)
     print "Type help, for a list of available commands.", "\n\n";
     
+    # EXPERIMENTAL - Al Newkirk (awnstudio)
+    # create synonyms for quite :)
+    $c->{'_commands'}->{'exit'} = $c->{'_commands'}->{'quit'} unless
+	defined $c->{'_commands'}->{'q'};
+    $c->{'_commands'}->{'q'} = $c->{'_commands'}->{'quit'} unless
+	defined $c->{'_commands'}->{'q'};
+    
     do {
 	print $c->{'_shell'}->{'prompt'};
-        @ARGV = split /\s+/, <>;
-        $c->_get_input();
-        $c->execute();
+        # get command and options - Al Newkirk (awnstudio)
+	my ($cmd, @opts) = split /\s+/, <>;
+	if ($cmd) {
+	    if (defined $c->{_commands}->{$cmd}) {
+		$c->{_commands}->{$cmd}->run($c);
+		#$c->_get_input();
+		#$c->execute();
+	    }
+	    else {
+		print "Error, the command \"$cmd\" is not available.\n";
+		print "Need help? Type \"help\"\n";
+	    }
+	}
     } 	while (1);
 }
 
