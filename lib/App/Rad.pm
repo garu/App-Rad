@@ -595,9 +595,10 @@ our $VERSION = '1.04';
     # run operations
     # in a shell-like environment
     sub shell {
-	my $class = shift;
+	my $class  = shift;
+	my $params = shift;
 	require App::Rad::Shell;
-	App::Rad::Shell::shell($class);
+	App::Rad::Shell::shell($class, $params);
     }
 
     sub execute {

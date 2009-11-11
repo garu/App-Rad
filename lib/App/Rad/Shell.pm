@@ -23,6 +23,14 @@ sub shell {
     my $prompt = $0;
     $prompt =~ s{\.pl$}{};
 
+    my $params_ref = shift;
+    if ($params_ref) {
+        croak 'argument to shell() method must be a hash reference'
+            unless (ref $params_ref eq 'HASH');
+	$prompt = $params_ref->{prompt} if defined $params_ref->{prompt};
+    }
+    # $c->{'_shell'} = %{ shift() };
+
     eval 'use Term::ReadKey';
     %{$c->{'_shell'}} = (
             'has_readkey' => (defined $@) ? 0 : 1,
@@ -30,14 +38,6 @@ sub shell {
             'autocomp'    => 1,
 			);
 
-    my $params_ref = shift;
-    if ($params_ref) {
-        croak 'argument to shell() method must be a hash reference'
-            unless (ref $params_ref eq 'HASH');
-    
-        #TODO    
-    }
-    # $c->{'_shell'} = %{ shift() };
     $c->_init();
     $c->_register_functions();
 
