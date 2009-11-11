@@ -9,11 +9,16 @@ our $VERSION = '0.01';
 # get input from user via prompting - Al Newkirk (awnstudio)
 sub prompt {
     my $criteria = pop(@_);
+    my $c 	 = pop(@_);
+    
     croak 'input prompt criteria must be a hash reference'
             unless (ref $criteria eq 'HASH');
     
-    if ($criteria->{suggest}) {
-        print $criteria->{ask}, " [ e.g. ", $criteria->{suggest}, " ] : ";
+    return $c->options->{$criteria->{opt}} if
+	defined $criteria->{opt} && $c->options->{$criteria->{opt}};
+    
+    if ($criteria->{set}) {
+        print $criteria->{ask}, " [ e.g. ", $criteria->{set}, " ] : ";
     }
     else {
         print $criteria->{ask}, " : ";
@@ -27,8 +32,8 @@ sub prompt {
         return "0";
     }
     else {
-        if ($criteria->{suggest}) {
-            return $_ ? $_ : $criteria->{suggest};    # return $_ if it has a value
+        if ($criteria->{set}) {
+            return $_ ? $_ : $criteria->{set};    # return $_ if it has a value
         }
         else {
             return $_;
@@ -99,8 +104,16 @@ sub shell {
     # print startup message - Al Newkirk (awnstudio)
     sub startup_message {
 	my $ref = shift;
-	my $startup_message = "".
-	    "$ref->{title}\n" if defined $ref->{title};
+	my $startup_message = "";
+	if (defined $ref->{title}) {
+	    if (ref($ref->{title}) eq "ARRAY") {
+		$startup_message .= join "\n", @{$ref->{title}};
+	    }
+	    else {
+		$startup_message = $ref->{title};
+	    }
+	    $startup_message .= "\n";
+	}
 	return ($startup_message || "") . 
 	    "Type help; for a list of available commands, and q; to quit.\n" .
 	    "Execute commands [w/ or wo/ options] using a ; at the end of the line.\n";
@@ -135,8 +148,16 @@ sub shell {
 		    $multiline_read   = 0;
 		    @multiline_buffer = ();
 		}
+		else {
+		    # hack for one-liners, may break something :\
+		    # Al Newkirk (awnstudio)
+		    if ($cmd =~ /^\w+\s(\w+|-+\w+(=\w+)?).*;/) {
+			($cmd, @opts) = $cmd =~ /^(\w+)\s(.*)/;
+		    }
+		}
 		
 		$cmd =~ s/\;$//;
+		$opts[0] =~ s/\;(\s+)?$// if @opts;
 		$opts[$#opts] =~ s/\;(\s+)?$// if @opts;
 		
 		# process commands
@@ -147,9 +168,21 @@ sub shell {
 			print startup_message($params_ref);
 		    }
 		    else {
-			#$c->_get_input();
-			#$c->execute();
+			# seperate params by space
+			my @psuedo_argvs = ();
+			foreach my $opt (@opts) {
+			    if ($opt =~ /\s/) {
+				push @psuedo_argvs, split /\s+/, $opt;
+			    }
+			    else {
+				push @psuedo_argvs, $opt;
+			    }
+			}
+			$c->_parse(\@psuedo_argvs, $c->{_commands}->{$cmd});
 			print $c->{_commands}->{$cmd}->run($c), "\n";
+			# reset parameters to avoid collision - Al Newkirk (awnstudio)
+			# possbily not good :\
+			delete $c->{_commands}->{$cmd}->{args};
 		    }
 		}
 		else {

@@ -15,6 +15,15 @@ App::Rad->shell({
 sub write :Help('Say hello!') {
     my $c = shift;
     return "I am called " . ($c->prompt({
-        ask => 'What\'s your name?'
+        ask => 'What\'s your name?',
+        opt => 'name'
+    }) || "Something...?");
+}
+
+sub read :Help('Read a file!') {
+    my $c = shift;
+    return "I am called " . ($c->prompt({
+        ask => 'What\'s your name?',
+        opt => 'name'
     }) || "Something...?");
 }
