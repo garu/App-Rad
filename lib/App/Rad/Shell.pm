@@ -106,8 +106,17 @@ sub shell {
 	my $ref = shift;
 	my $startup_message = "";
 	if (defined $ref->{title}) {
-	    if (ref($ref->{title}) eq "ARRAY") {
-		$startup_message .= join "\n", @{$ref->{title}};
+	    if (ref($ref->{title}) eq "GLOB") {
+		my $fh = ${$ref->{title}};
+		while (<$fh>) {
+		    $startup_message .= "$_";
+		}
+		# replace filehandle with content :)
+		$ref->{title} = $startup_message;
+	    }
+	    elsif (ref($ref->{title}) eq "ARRAY") {
+		$startup_message .=
+		    join($/, map {chomp $_; $_} @{$ref->{title}});
 	    }
 	    else {
 		$startup_message = $ref->{title};
@@ -122,10 +131,10 @@ sub shell {
     
     # EXPERIMENTAL - Al Newkirk (awnstudio)
     # create synonyms for quit :)
-    $c->{'_commands'}->{'exit'} = $c->{'_commands'}->{'quit'} unless
-	defined $c->{'_commands'}->{'q'};
-    $c->{'_commands'}->{'q'} = $c->{'_commands'}->{'quit'} unless
-	defined $c->{'_commands'}->{'q'};
+    #    $c->{'_commands'}->{'exit'} = $c->{'_commands'}->{'quit'} unless
+    #	defined $c->{'_commands'}->{'q'};
+    #    $c->{'_commands'}->{'q'} = $c->{'_commands'}->{'quit'} unless
+    #	defined $c->{'_commands'}->{'q'};
     
     # Adding multi-line read support - Al Newkirk (awnstudio)
     my $multiline_read   = 0;
@@ -139,9 +148,15 @@ sub shell {
 	if ($cmd) {
 	    if ($cmd =~ /\;(\s+)?$/) {
 		
+		my $lp = $c->{'_shell'}->{'prompt'};
+		$lp  =~ s/\s+$//g;
+		$cmd =~ s/^$lp//;
+		
 		# what kind of multiline?
 		if ($multiline_read) {
 		    # build command
+		    push @multiline_buffer,
+		        split /\s+(?![\w]+["'])/, $cmd;
 		    ($cmd, @opts) = @multiline_buffer;
 		    # reset 
 		    $c->{'_shell'}->{'prompt'} = "$prompt> ";
@@ -170,13 +185,14 @@ sub shell {
 		    else {
 			# seperate params by space
 			my @psuedo_argvs = ();
+			@opts = split /\s+(?![\w]+["'])/, join " ", @opts;
 			foreach my $opt (@opts) {
-			    if ($opt =~ /\s/) {
-				push @psuedo_argvs, split /\s+/, $opt;
+			    $opt =~ s/(^\s+|\s+$)//g;
+			    if ($opt =~ /^(\-+)(\w+)=(['"])(.+)(['"])/)
+			    {
+				$opt = "$1$2=$4" if $1 && $2 && $4;
 			    }
-			    else {
-				push @psuedo_argvs, $opt;
-			    }
+			    push @psuedo_argvs, $opt if $opt;
 			}
 			$c->_parse(\@psuedo_argvs, $c->{_commands}->{$cmd});
 			print $c->{_commands}->{$cmd}->run($c), "\n";
@@ -193,9 +209,13 @@ sub shell {
 	    else {
 		my $mlp =
 		    $c->{'_shell'}->{'prompt'} =
-			("." x length($prompt)) . "> ";
+			("-" x length($prompt)) . "> ";
+		$mlp =~ s/\s+$//g;
 		$cmd =~ s/^$mlp//;
-		push @multiline_buffer, split /\s+/, $cmd;
+		if ($cmd) {
+		    push @multiline_buffer,
+		        split /\s+(?![\w]+["'])/, $cmd;
+		}
 		$multiline_read = 1;
 	    }
 	}
