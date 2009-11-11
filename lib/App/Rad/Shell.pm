@@ -6,6 +6,35 @@ use warnings;
 
 our $VERSION = '0.01';
 
+# get input from user via prompting - Al Newkirk (awnstudio)
+sub prompt {
+    my $criteria = pop(@_);
+    croak 'input prompt criteria must be a hash reference'
+            unless (ref $criteria eq 'HASH');
+    
+    if ($criteria->{suggest}) {
+        print $criteria->{ask}, " [ e.g. ", $criteria->{suggest}, " ] : ";
+    }
+    else {
+        print $criteria->{ask}, " : ";
+    }
+
+    $| = 1;          # force a flush after our print
+    $_ = <STDIN>;    # get the input from STDIN (presumably the keyboard)
+
+    chomp;
+    if ( $_ eq "0" ) {
+        return "0";
+    }
+    else {
+        if ($criteria->{suggest}) {
+            return $_ ? $_ : $criteria->{suggest};    # return $_ if it has a value
+        }
+        else {
+            return $_;
+        }
+    }
+}
 
 #    App::Rad->shell( {
 #        prompt     => 'cmd: ',
@@ -37,7 +66,12 @@ sub shell {
             'prompt'      => "$prompt> ",
             'autocomp'    => 1,
 			);
-
+    
+    # process cli request instead of shell - Al Newkirk (awnstudio)
+    if (@ARGV) {
+	return App::Rad->run;
+    }
+    
     $c->_init();
     $c->_register_functions();
 
