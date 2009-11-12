@@ -86,7 +86,7 @@ sub shell {
 
     # this is *before* setup() because the application
     # developer might want to modify the command.
-    $c->register('quit', \&quit, 'exits the shell');
+    $c->register('quit', \&quit, 'exits the command shell.');
     $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands.');
     
     # EXPERIMENTAL - Al Newkirk (awnstudio)
@@ -95,7 +95,7 @@ sub shell {
 	my $c = shift;
 	my $clr = $^O =~ /[Ww]in(32)?/ ? "cls" : "clear";
 	system($clr);
-    }, 'clear the shell buffer');
+    }, 'clear text from the screen.');
     
     # then we run the setup to register
     # some commands
@@ -124,7 +124,7 @@ sub shell {
 	    $startup_message .= "\n";
 	}
 	return ($startup_message || "") . 
-	    "Type help; for a list of available commands, and q; to quit.\n" .
+	    "Type help; for a list of available commands, and quit; to quit.\n" .
 	    "Execute commands [w/ or wo/ options] using a ; at the end of the line.\n";
     }
     print startup_message($params_ref);
