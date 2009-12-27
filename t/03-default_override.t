@@ -20,9 +20,9 @@ EOT
     close $fh;
    
     my $ret = `$^X $filename`;
-
     is($ret, "this is an override of the default command\n");
 
+    $ret = '';
     $ret = `$^X $filename unknown`;
     is($ret, "this is an override of the default command\n");
 

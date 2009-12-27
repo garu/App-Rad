@@ -16,7 +16,7 @@ sub execute {
 			$cmd = $cmds[0];
 		}
 	}
-	return $c->SUPER::execute($cmd);
+	return $c->_execute($cmd);
 }
 
 sub get_commands_like {
@@ -25,7 +25,7 @@ sub get_commands_like {
 
 	my @cmds = ();
 	my $len = length($cmd);
-	foreach (@{$c->commands}) {
+	foreach ($c->commands) {
 		push (@cmds, $_) if substr ($_, 0, $len) eq $cmd;
 	}
 	return @cmds;

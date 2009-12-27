@@ -67,4 +67,4 @@ The "help" command is registered by Rad automatically. To disable it, just unreg
        $c->register_commands(); 
    }
 
-
+=head2 How do I explicitly Rad's internal "help" command?

@@ -22,9 +22,10 @@ sub default {
     }
 }
 
+# TODO: let 'invalid' receive the invalid command name
 sub invalid {
     my $c = shift;
-    return 'sorry, but "' . $c->cmd . '" does not exist.';
+    return 'invalid command';
 }
 EOT
 
@@ -38,10 +39,10 @@ EOT
     is($ret, "keys: 1\n", 'no command, with parameters (should fall to default)');
 
     $ret = `$^X $filename test`;
-    is($ret, "sorry, but \"test\" does not exist.\n", 'invalid command (should fall to invalid)');
+    is($ret, "invalid command\n", 'invalid command (should fall to invalid)');
 
     $ret = `$^X $filename test --something`;
-    is($ret, "sorry, but \"test\" does not exist.\n", 'invalid command, with parameters (should fall to invalid)');
+    is($ret, "invalid command\n", 'invalid command, with parameters (should fall to invalid)');
 
 
 

@@ -1,12 +1,33 @@
 Revision history for App-Rad
 
-1.05	2009/08/
+1.05_01	2009/08/
+
+        *** KNOWN BUG *** 
+		@ARGV is left unchanged. As a result, $c->getopt no longer works. 
+		This should be fixed by the time 1.05 comes out.
+		******************
+
 		*** API CHANGE *** 
 		$c->execute does not call 'default' or 'invalid' commands anymore if
         it can't find the command name. Rad itself still does, but via 
         parse_input. You don't have to worry about this unless you make 
         explicit calls to $c->execute.
 		******************
+
+		*** API CHANGE *** 
+		if you redefine invalid(), note the invalid command is no longer
+		passed as $c->cmd. This was inconsistent, being it's not an actual
+		command. Now, the invalid subroutine receives 2 arguments: $c and
+		the offending command, so you can do:
+		
+		sub invalid {
+		    my ($c, $invalid_command) = (@_);
+		    ...
+		}
+		
+		all other subroutines keep receiving just $c as argument.
+		******************
+		
 	
         $c->path and $c->realpath new auxiliary methods for giving you the
         app's bin path and realbin path (via FindBin core module) - 

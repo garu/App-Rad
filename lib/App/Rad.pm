@@ -9,19 +9,19 @@ use strict;
 our $VERSION = '1.04';
 {
 
-    #========================#
-    #   INTERNAL FUNCTIONS   #
-    #========================#
+#========================#
+#   INTERNAL FUNCTIONS   #
+#========================#
 
-    my @OPTIONS = ();
+my @OPTIONS = ();
 
-    # - "I'm so excited! Feels like I'm 14 again" (edenc on Rad)
-    sub _init {
+# - "I'm so excited! Feels like I'm 14 again" (edenc on Rad)
+sub _init {
 	my $c = shift;
 
 	# instantiate references for the first time
 	$c->{'_ARGV'}    = [];
-	$c->{'_options'} = {};
+	#$c->{'_options'} = {};
 	$c->{'_stash'}   = {};
 	$c->{'_config'}  = {};
 	$c->{'_plugins'} = [];
@@ -37,6 +37,9 @@ our $VERSION = '1.04';
 	    'invalid'      => \&invalid,
 	    'teardown'     => \&teardown,
 	};
+	
+	# create our standard global command
+	$c->register( '', sub {} );
 
 	#load extensions
 	App::Rad::Help->load($c);
@@ -64,14 +67,14 @@ our $VERSION = '1.04';
 	    $c->debug( 'initializing: default commands are: '
 		  . join( ', ', $c->commands() ) );
 	}
-    }
+}
 
-    sub import {
+sub import {
 	my $class = shift;
 	@OPTIONS = @_;
-    }
+}
 
-    sub load_plugin {
+sub load_plugin {
 	my $c      = shift;
 	my $plugin = shift;
 	my $class  = ref $c;
@@ -103,18 +106,18 @@ our $VERSION = '1.04';
 	    # fill $c->plugins()
 	    push @{ $c->{'_plugins'} }, $plugin;
 	}
-    }
+}
 
-    # this function browses a file's
-    # symbol table (usually 'main') and maps
-    # each function to a hash
-    #
-    # FIXME: if I create a sub here (Rad.pm) and
-    # there is a global variable with that same name
-    # inside the user's program (e.g.: sub ARGV {}),
-    # the name will appear here as a command. It really
-    # shouldn't...
-    sub _get_subs_from {
+# this function browses a file's
+# symbol table (usually 'main') and maps
+# each function to a hash
+#
+# FIXME: if I create a sub here (Rad.pm) and
+# there is a global variable with that same name
+# inside the user's program (e.g.: sub ARGV {}),
+# the name will appear here as a command. It really
+# shouldn't...
+sub _get_subs_from {
 	my $package = shift || 'main';
 	$package .= '::';
 
@@ -128,12 +131,12 @@ our $VERSION = '1.04';
 	    }
 	}
 	return %subs;
-    }
+}
 
-    # overrides our pre-defined control
-    # functions with any available
-    # user-defined ones
-    sub _register_functions {
+# overrides our pre-defined control
+# functions with any available
+# user-defined ones
+sub _register_functions {
 	my $c    = shift;
 	my %subs = _get_subs_from('main');
 
@@ -145,11 +148,173 @@ our $VERSION = '1.04';
 		$c->{'_functions'}->{$_} = $subs{$_};
 	    }
 	}
-    }
+}
 
-    # retrieves command line arguments
-    # to be executed by the main program
-    sub parse_input {
+# retrieves command line arguments
+# to be executed by the main program
+# 
+#When the parser starts, it fetches tokens left to right, validating them agains Global options. At the first argument not specified by a previous Global option, or at the first token that doesn't start with a hyphen (i.e. the first non-option given), the parser will determine which command it is. If the token is not a valid command, the invalid command is called. If there is no token at all, then the default command is called instead.
+#TODO: handle ARGV
+sub parse_input {
+    my $c = shift;
+    my @input = @_ || @ARGV; #TODO: keep doing this?
+    my $slurp = 0;
+    my $invalid;
+
+print STDERR ">>> starting parser\n";
+    # we start with the global command
+    #my $current_command = $c->{'_globals'};
+    my $current_command = $c->{'_commands'}->{''};
+    my ($option_name, $option_value, $arguments_left);
+    
+    while (my $token = shift @input) {
+print STDERR ">>> token is '$token'\n";
+        # '--' marks the end of options
+        if ($token eq '--') {
+print STDERR ">>> slurping...\n";
+            $slurp = 1;
+        }
+        # option found
+        elsif ( $token =~ s/^-// ) {
+print STDERR ">>> option found\n";
+            Carp::croak "Missing $arguments_left argument(s) for option $option_name"
+                if $arguments_left;
+            
+            # -foo=bar, --foo, --foo=bar
+            #if ( $token =~ m/^-?([^=]+)(?:=(.+))?/o ) {
+            #TODO: regex improvement?
+            #if ( $token =~ m/^(?:-([^=]+)(?:=(.+))?)|([^-=])+=(.+)$/o ) {
+            if ( $token =~ m/^(?:-([^=]+)(?:=(.+))?|([^-=]+)=(.+))$/o ) {
+                ($option_name, $option_value) = (defined $4 ? ($3, $4) : ($1, $2));
+print STDERR ">>> -foo=bar, --foo, --foo=bar\n";
+            }
+            # -foo
+            else {
+print STDERR ">>> -foo\n";
+                my @flags = split //, $token;
+                # -f -o -o (if all elements are valid options, we push them back)
+                if (@flags > 1
+                 && @flags == (grep { $current_command->is_option($_) } @flags) ) {
+print STDERR ">>> '@flags' are valid options, pushing them back\n";
+                    unshift @input, map { '-' . $_ } @flags;
+                    next;
+                }
+                # otherwise, -foo means the "foo" option
+                else {
+print STDERR ">>> '$token' means the '$token' option\n";
+                    ($option_name, $option_value) = ($token, undef);
+                }
+            }
+print STDERR ">>> setting option '$option_name' with value '$option_value'\n";
+            $arguments_left = $current_command->setopt($option_name, $option_value);
+print STDERR ">>> returned $arguments_left as the number of arguments left for that option\n";
+        }
+        # when in slurp mode, tokens are arguments
+        elsif ($slurp or $arguments_left) {
+print STDERR ">>> we are in slurp mode, or there are arguments left\n";
+            if (defined $option_name) {
+print STDERR ">>> pushing yet another argument to option '$option_name' (value: '$token')\n";
+                $arguments_left = $current_command->setopt($option_name, $token);
+print STDERR ">>> number of arguments left for option '$option_name': $arguments_left\n";
+            }
+            else {
+print STDERR ">>> pushing token '$token' to c->argv queue\n";
+                push @{$c->argv}, $token;
+            }
+        }
+        # we already have a command, so it's a stand-alone argument
+        # TODO: should we allow it in all cases?
+        # TODO: parsing chained commands
+        elsif ( defined $c->cmd or defined $invalid) {
+print STDERR ">>> we already have a command, push token '$token' to c->argv queue\n";
+            push @{$c->argv}, $token;
+        }
+        # it's a command, and no previous command was set
+        elsif ( $c->is_command($token) ) {
+            $current_command = $c->{'_commands'}->{$token};
+            $c->cmd = $current_command->name;
+print STDERR ">>> got command: '" . $c->cmd . "'\n";
+        }
+        # it's an invalid command
+        else {
+print STDERR ">>> TODO: invalid command\n";
+            $invalid = $token; #TODO: pass it as something else, maybe?
+            # return;
+            # set as invalid and mark $c->cmd, but keep parsing the invalid
+            # command as '' (global)
+            #$invalid = 1;
+        }
+    }
+    Carp::croak "missing $arguments_left argument(s) for option '$option_name'"
+        if $arguments_left;
+
+    # TODO: this should be done whenever a command is 'done', 
+    # not when the input is over
+    check_required($current_command);    # TODO: this goes into Parser.pm
+    check_conflicts($current_command);   # TODO: this goes into Parser.pm
+    set_defaults($current_command);      # TODO: this goes into Parser.pm
+    push_to_stash($c, $current_command); # TODO: this goes into Parser.pm
+    
+    # let caller know if command was set or if we'll use the default
+    $c->cmd = '' unless defined $c->cmd;
+    return $invalid;
+}
+
+sub check_required {
+    my $command = shift;
+    foreach my $option (keys %{ $command->{opts} }) {
+        if ( $command->{opts}->{$option}->{required} 
+           and not exists $command->options->{$option} 
+        ) {
+            require Carp;
+            Carp::croak "option '$option' is required for command " . $command->name;
+        }
+    }
+}
+
+sub check_conflicts {
+    my $command = shift;
+    foreach my $option (sort keys %{ $command->{options} }) {
+        my $conflicts = $command->{opts}->{$option}->{conflicts_with};
+        if ( $conflicts ) {
+            # TODO make sure we store it as a ref, so we don't have to do the below
+            $conflicts = [ $conflicts ] unless ref $conflicts; 
+            
+            foreach my $conflict ( @{$conflicts} ) {
+                if (defined $command->{options}->{$conflict}) {
+                    require Carp;
+                    Carp::croak "options '$option' and '$conflict' conflict and can not be used together";
+                }
+            }
+        }
+    }
+}
+
+sub set_defaults {
+    my $command = shift;
+    foreach my $option (keys %{ $command->{opts} }) {
+        if ( $command->{opts}->{$option}->{default} 
+           and not exists $command->options->{$option} 
+        ) {
+            $command->options->{$option} = $command->{opts}->{$option}->{default};
+        }
+    }
+}
+
+sub push_to_stash {
+    my ($c, $command) = (@_);
+    foreach my $option (keys %{ $command->{opts} }) {
+        if ( $command->options->{$option} and (my $stash = $command->{opts}->{$option}->{to_stash} )) {
+            $stash = [ $stash ] unless ref $stash; # TODO: always store to_stash under an array ref
+            
+            foreach my $elem ( @{$stash} ) {
+                $c->stash->{$elem} = $command->options->{$option};
+            }
+        }
+    }
+}
+
+sub __parse_input {
 	my $c = shift;
 
 	# parse global arguments out of ARGV
@@ -184,9 +349,9 @@ our $VERSION = '1.04';
 	    $c->_parse( \@tARGV, $cmd_obj );
 	}
 	return $cmd;    # default (''), invalid (undef), command ($cmd)
-    }
+}
 
-    sub _parse {
+sub _parse {
 	my ( $c, $arg_ref, $cmd_obj ) = (@_);
 
 	# al newkirk: conflict support
@@ -201,8 +366,8 @@ our $VERSION = '1.04';
 
 	    # single option (could be grouped)
 	    if ( $arg =~ m/^\-([^\-\=]+)$/o ) {
-		my @args = split //, $1;
-		foreach (@args) {
+            my @args = split //, $1;
+            foreach (@args) {
 
 		    # _parse_arg returns the options' name
 		    # and its "to_stash" values as an arrayref,
@@ -213,13 +378,13 @@ our $VERSION = '1.04';
 		    # improve it will be **much** appreciated. Thanks!
 		    my ( $opt, $to_stash ) = ( $_, undef );
 		    if ( defined $cmd_obj ) {
-			( $opt, $to_stash ) = $cmd_obj->_parse_arg($opt);
-			unless ($opt) {
-			    die "Error: $to_stash";
+                ( $opt, $to_stash ) = $cmd_obj->_parse_arg($opt);
+                unless ($opt) {
+                    die "Error: $to_stash";
 
-			    # TODO x 2: this should be forwared to an
-			    # overridable help error handler or whatever
-			}
+                    # TODO x 2: this should be forwared to an
+                    # overridable help error handler or whatever
+                }
 		    }
 
 		    $c->options->{$opt} =
@@ -228,10 +393,10 @@ our $VERSION = '1.04';
 		      : 1;
 
 		    foreach my $stash_key (@$to_stash) {
-			$c->stash->{$stash_key} =
-			  ( defined $c->stash->{$stash_key} )
-			  ? $c->stash->{$stash_key} + 1
-			  : 1;
+                $c->stash->{$stash_key} =
+                  ( defined $c->stash->{$stash_key} )
+                  ? $c->stash->{$stash_key} + 1
+                  : 1;
 		    }
 		}
 	    }
@@ -303,45 +468,47 @@ our $VERSION = '1.04';
 	}
     }
 
-    sub _run_full_round {
+sub _run_full_round {
 	my $c   = shift;
-	my $sub = shift;
+	my $cmd = shift;
 
 	$c->debug('calling pre_process function...');
 	$c->{'_functions'}->{'pre_process'}->($c);
 
 	$c->debug('executing command...');
-	$c->{'output'} = $sub->($c);
+	$c->{'output'} = $cmd->run($c, @_);
 
 	$c->debug('calling post_process function...');
 	$c->{'_functions'}->{'post_process'}->($c);
 
 	$c->debug('reseting output');
 	$c->{'output'} = undef;
-    }
+}
 
-    #========================#
-    #     PUBLIC METHODS     #
-    #========================#
+#========================#
+#     PUBLIC METHODS     #
+#========================#
 
-    sub load_config {
+sub load_config {
 	require App::Rad::Config;
 	App::Rad::Config::load_config(@_);
-    }
+}
 
-    sub path {
+#TODO save_config
+
+sub path {
 	require FindBin;
 	return $FindBin::Bin;
-    }
+}
 
-    sub real_path {
+sub real_path {
 	require FindBin;
 	return $FindBin::RealBin;
-    }
+}
 
-    # - "Wow! you guys rock!" (zoso on Rad)
-    #TODO: this code probably could use some optimization
-    sub register_commands {
+# - "Wow! you guys rock!" (zoso on Rad)
+#TODO: this code probably could use some optimization
+sub register_commands {
 	my $c            = shift;
 	my %help_for_sub = ();
 	my %rules        = ();
@@ -352,34 +519,31 @@ our $VERSION = '1.04';
 	    # if we receive a hash ref, it could be commands or
 	    # rules for fetching commands.
 	    if ( ref($item) ) {
-		Carp::croak
-		  '"register_commands" may receive only HASH references'
-		  unless ref $item eq 'HASH';
+            Carp::croak '"register_commands" may receive only HASH references'
+                unless ref $item eq 'HASH';
 
-		foreach my $params ( keys %{$item} ) {
-		    Carp::croak
-'registered elements may only receive strings or hash references'
-		      if ref $item->{$params}
-			  and ref $item->{$params} ne 'HASH';
+            foreach my $params ( keys %{$item} ) {
+                Carp::croak 'registered elements may only receive strings or hash references'
+                    if ref $item->{$params} and ref $item->{$params} ne 'HASH';
 
-		    # we got a rule - push it in.
-		    if (   $params eq '-ignore_prefix'
-			or $params eq '-ignore_suffix'
-			or $params eq '-ignore_regexp' )
-		    {
-			$rules{$params} = $item->{$params};
-		    }
+                # we got a rule - push it in.
+                if (   $params eq '-ignore_prefix'
+                    or $params eq '-ignore_suffix'
+                    or $params eq '-ignore_regexp'
+                ) {
+                    $rules{$params} = $item->{$params};
+                }
 
-		    # not a rule, so it's either a command with
-		    # help text or a command with an argument list.
-		    # either way, we push it to our 'help' hash.
-		    else {
-			$help_for_sub{$params} = $item->{$params};
-		    }
-		}
+                # not a rule, so it's either a command with
+                # help text or a command with an argument list.
+                # either way, we push it to our 'help' hash.
+                else {
+                    $help_for_sub{$params} = $item->{$params};
+                }
+            }
 	    }
 	    else {
-		$help_for_sub{$item} = undef;    # no help text
+            $help_for_sub{$item} = undef;    # no help text
 	    }
 	}
 
@@ -394,77 +558,66 @@ our $VERSION = '1.04';
 	    # list if it's *not* a control function
 	    if ( not defined $c->{'_functions'}->{$cmd} ) {
 
-		if ( $cmd eq '-globals' ) {
+            if ( $cmd eq '-globals' ) {
+                # use may set it as a flag to enable global arguments
+                # or elaborate on each available argument
+                #my %command_options = ( name => '', code => sub { } );
+                #if ( ref $help_for_sub{$cmd} ) {
+                #    $command_options{opts} = $help_for_sub{$cmd};
+                #}
+                #my $cmd_obj = App::Rad::Command->new( \%command_options );
+                #$c->{'_globals'} = $cmd_obj;
+                # globals is a command named ''
+                $c->register( '', sub {} );
+                # TODO: help showing 'Global options:'
 
-		    # use may set it as a flag to enable global arguments
-		    # or elaborate on each available argument
-		    my %command_options = ( name => '', code => sub { } );
-		    if ( ref $help_for_sub{$cmd} ) {
-			$command_options{args} = $help_for_sub{$cmd};
-		    }
-		    my $cmd_obj = App::Rad::Command->new( \%command_options );
-		    $c->{'_globals'} = $cmd_obj;
+            #                $c->register(undef, undef, $help_for_sub{$cmd});
+            }
 
-	       #                $c->register(undef, undef, $help_for_sub{$cmd});
-		}
-
-		# user wants to register a valid (existant) sub
-		elsif ( exists $subs{$cmd} ) {
-		    $c->register( $cmd, $subs{$cmd}, $help_for_sub{$cmd} );
-		}
-		else {
-		    Carp::croak
-"'$cmd' does not appear to be a valid sub. Registering seems impossible.\n";
-		}
+            # user wants to register a valid (existant) sub
+            elsif ( exists $subs{$cmd} ) {
+                $c->register( $cmd, $subs{$cmd}, $help_for_sub{$cmd} );
+            }
+            else {
+                Carp::croak "'$cmd' does not appear to be a valid sub. Registering seems impossible.\n";
+            }
 	    }
 	}
 
 	# no parameters, or params+rules: try to register everything
 	if ( ( !%help_for_sub ) or %rules ) {
 	    foreach my $subname ( keys %subs ) {
+            # we only add the sub to the commands
+            # list if it's *not* a control function
+            if ( not defined $c->{'_functions'}->{$subname} ) {
+                if ( $rules{'-ignore_prefix'} ) {
+                    next if substr( $subname, 0, length( $rules{'-ignore_prefix'} ) )
+                            eq $rules{'-ignore_prefix'};
+                }
+                if ( $rules{'-ignore_suffix'} ) {
+                    next if substr( $subname, 
+                                length($subname) - length( $rules{'-ignore_suffix'} ),
+				                length( $rules{'-ignore_suffix'} )
+				            ) eq $rules{'-ignore_suffix'};
+                }
+                if ( $rules{'-ignore_regexp'} ) {
+                    my $re = $rules{'-ignore_regexp'};
+                    next if $subname =~ m/$re/o;
+                }
 
-		# we only add the sub to the commands
-		# list if it's *not* a control function
-		if ( not defined $c->{'_functions'}->{$subname} ) {
-
-		    if ( $rules{'-ignore_prefix'} ) {
-			next
-			  if (
-			    substr(
-				$subname, 0,
-				length( $rules{'-ignore_prefix'} )
-			    ) eq $rules{'-ignore_prefix'}
-			  );
-		    }
-		    if ( $rules{'-ignore_suffix'} ) {
-			next
-			  if (
-			    substr(
-				$subname,
-				length($subname) -
-				  length( $rules{'-ignore_suffix'} ),
-				length( $rules{'-ignore_suffix'} )
-			    ) eq $rules{'-ignore_suffix'}
-			  );
-		    }
-		    if ( $rules{'-ignore_regexp'} ) {
-			my $re = $rules{'-ignore_regexp'};
-			next if $subname =~ m/$re/o;
-		    }
-
-		    # avoid duplicate registration
-		    if ( !exists $help_for_sub{$subname} ) {
-			$c->register( $subname, $subs{$subname} );
-		    }
-		}
+                # avoid duplicate registration
+                if ( !exists $help_for_sub{$subname} ) {
+                    $c->register( $subname, $subs{$subname} );
+                }
+            }
 	    }
 	}
-    }
+}
 
-    sub register_command { return register(@_) }
+sub register_command { return register(@_) }
 
-    sub register {
-	my ( $c, $command_name, $coderef, $extra ) = @_;
+sub register {
+    my ( $c, $command_name, $coderef, $extra ) = @_;
 
 	# short circuit
 	return unless ref $coderef eq 'CODE';
@@ -478,10 +631,10 @@ our $VERSION = '1.04';
 	# or an argument hashref
 	if ($extra) {
 	    if ( ref $extra ) {
-		$command_options{args} = $extra;
+            $command_options{opts} = $extra;
 	    }
 	    else {
-		$command_options{help} = $extra;
+            $command_options{help} = $extra;
 	    }
 	}
 
@@ -493,11 +646,11 @@ our $VERSION = '1.04';
 
 	$c->{'_commands'}->{$command_name} = $cmd_obj;
 	return $command_name;
-    }
+}
 
-    sub unregister_command { return unregister(@_) }
+sub unregister_command { return unregister(@_) }
 
-    sub unregister {
+sub unregister {
 	my ( $c, $command_name ) = @_;
 
 	if ( $c->{'_commands'}->{$command_name} ) {
@@ -506,43 +659,45 @@ our $VERSION = '1.04';
 	else {
 	    return undef;
 	}
-    }
+}
 
-    sub create_command_name {
+#TODO: move this to the 'include' plugin
+sub create_command_name {
 	my $id = 0;
 	foreach ( commands() ) {
 	    if (m/^cmd(\d+)$/) {
-		$id = $1 if ( $1 > $id );
+            $id = $1 if ( $1 > $id );
 	    }
 	}
 	return 'cmd' . ( $id + 1 );
-    }
+}
 
-    sub commands {
-	return ( keys %{ $_[0]->{'_commands'} } );
-    }
+sub commands {
+	return ( grep { $_ ne '' } keys %{ $_[0]->{'_commands'} } );
+}
 
-    sub is_command {
+sub is_command {
 	my ( $c, $cmd ) = @_;
+	return 0 unless defined $cmd and $cmd ne '';
 	return (
 	    defined $c->{'_commands'}->{$cmd}
 	    ? 1
 	    : 0
 	);
-    }
-
-    sub command : lvalue {
+}
+use diagnostics;
+sub command : lvalue {
 	cmd(@_);
-    }
+}
 
-    sub cmd : lvalue {
+sub cmd : lvalue {
 	$_[0]->{'cmd'};
-    }
+}
 
-    # - "I'm loving having something else write up the 80% drudge
-    #   code for the small things." (benh on Rad)
-    sub run {
-	my $class = shift;
+# - "I'm loving having something else write up the 80% drudge
+#   code for the small things." (benh on Rad)
+sub run {
+    my $class = shift;
 	my $c     = {};
 	bless $c, $class;
 
@@ -558,45 +713,40 @@ our $VERSION = '1.04';
 
 	# now we get the actual input from
 	# the command line (someone using the app!)
-	my $cmd = $c->parse_input();
+#	my $cmd_name = $c->parse_input();
+    my $arg = $c->parse_input();
+    my $cmd_obj = $c->{'_commands'}->{$c->cmd};
 
-	if ( not defined $cmd ) {
-	    $c->debug( "'"
-		  . $c->cmd
-		  . "' is not a valid command. Falling to invalid." );
-	    $cmd = $c->{'_functions'}->{'invalid'};
+    # handle special cases (default and invalid)
+	if ( defined $arg ) {
+	    $c->debug( "'$arg' is not a valid command. Falling to invalid." );
+	    $cmd_obj->{code} = $c->{'_functions'}->{'invalid'};
 	}
-	elsif ( $cmd eq '' ) {
+	elsif ( $c->cmd eq '' ) {
 	    $c->debug('no command detected. Falling to default');
-	    $cmd = $c->{'_functions'}->{'default'};
+	    $cmd_obj->{code} = $c->{'_functions'}->{'default'};
 	}
-	else {
-	    my $obj = $c->{'_commands'}->{$cmd};
-
-	    # set default values for command (if available)
-	    $obj->_set_default_values( $c->options, $c->stash );
-
-	    $cmd = sub { $obj->run(@_) }
-	}
+    
+#    $cmd = sub { $obj->run(@_) }
 
 	# run the specified command
-	$c->_run_full_round($cmd);
+	$c->_run_full_round($cmd_obj, $arg);
 
 	# that's it. Tear down everything and go home :)
 	$c->{'_functions'}->{'teardown'}->($c);
 
 	return 0;
-    }
+}
 
-    # run operations
-    # in a shell-like environment
-    sub shell {
+# run operations
+# in a shell-like environment
+sub shell {
 	my $class = shift;
 	require App::Rad::Shell;
 	App::Rad::Shell::shell($class);
-    }
+}
 
-    sub execute {
+sub execute {
 	my ( $c, $cmd ) = @_;
 
 	# given command has precedence
@@ -614,28 +764,28 @@ our $VERSION = '1.04';
 	    # set default values for command (if available)
 	    $cmd_obj->_set_default_values( $c->options, $c->stash );
 
-	    $c->_run_full_round( sub { $cmd_obj->run(@_) } );
+	    $c->_run_full_round( $cmd_obj, @_ );
 	    return $cmd;
 	}
 	else {
-
 	    # if not a command, return undef
 	    return;
 	}
-    }
+}
 
-    sub argv    { return $_[0]->{'_ARGV'} }
-    sub options { return $_[0]->{'_options'} }
-    sub stash   { return $_[0]->{'_stash'} }
-    sub config  { return $_[0]->{'_config'} }
+sub argv    { return $_[0]->{'_ARGV'} }
+#sub options { return $_[0]->{'_options'} }
+sub options { return $_[0]->{'_commands'}->{ $_[0]->{'cmd'} }->options }
+sub stash   { return $_[0]->{'_stash'} }
+sub config  { return $_[0]->{'_config'} }
 
-    # $c->plugins is sort of "read-only" externally
-    sub plugins {
+# $c->plugins is sort of "read-only" externally
+sub plugins {
 	my @plugins = @{ $_[0]->{'_plugins'} };
 	return @plugins;
-    }
+}
 
-    sub getopt {
+sub getopt {
 	require Getopt::Long;
 	Carp::croak "Getopt::Long needs to be version 2.36 or above"
 	  unless $Getopt::Long::VERSION >= 2.36;
@@ -644,6 +794,7 @@ our $VERSION = '1.04';
 
 	# reset values from tinygetopt
 	#$c->{'_options'} = {};
+	#TODO: how the new parser copes with this?
 	%{ $c->options } = ();
 
 	my $parser = new Getopt::Long::Parser;
@@ -661,11 +812,11 @@ our $VERSION = '1.04';
 	if ( shift->{'debug'} ) {
 	    print "[debug]   @_\n";
 	}
-    }
+}
 
-    # gets/sets the output (returned value)
-    # of a command, to be post processed
-    sub output {
+# gets/sets the output (returned value)
+# of a command, to be post processed
+sub output {
 	my ( $c, @msg ) = @_;
 	if (@msg) {
 	    $c->{'output'} = join( ' ', @msg );
@@ -673,35 +824,35 @@ our $VERSION = '1.04';
 	else {
 	    return $c->{'output'};
 	}
-    }
+}
 
-    #=========================#
-    #     CONTROL FUNCTIONS   #
-    #=========================#
+#=========================#
+#     CONTROL FUNCTIONS   #
+#=========================#
 
-    sub setup { $_[0]->register_commands( { -ignore_prefix => '_' } ) }
+sub setup { $_[0]->register_commands( { -ignore_prefix => '_' } ) }
 
-    sub teardown { }
+sub teardown {}
 
-    sub pre_process { }
+sub pre_process {}
 
-    sub post_process {
+sub post_process {
 	my $c = shift;
 
 	if ( $c->output() ) {
 	    print $c->output() . $/;
 	}
-    }
+}
 
-    sub default {
+sub default {
 	my $c = shift;
 	return $c->{'_commands'}->{'help'}->run($c);
-    }
+}
 
-    sub invalid {
+sub invalid {
 	my $c = shift;
 	return $c->{'_functions'}->{'default'}->($c);
-    }
+}
 
 }
 42;    # ...and thus ends thy module  ;)
