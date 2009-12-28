@@ -21,7 +21,6 @@ sub _init {
 
 	# instantiate references for the first time
 	$c->{'_ARGV'}    = [];
-	#$c->{'_options'} = {};
 	$c->{'_stash'}   = {};
 	$c->{'_config'}  = {};
 	$c->{'_plugins'} = [];
@@ -314,159 +313,6 @@ sub push_to_stash {
     }
 }
 
-sub __parse_input {
-	my $c = shift;
-
-	# parse global arguments out of ARGV
-	if ( $c->{'_globals'} ) {
-	    $c->_parse( \@ARGV, $c->{'_globals'} );
-	}
-
-	#TODO: this could use some major improvements
-	# now the next item in ARGV is our command name.
-	# If it doesn't exist, we make it blank so we
-	# can call the 'default' command
-	my $cmd = $c->{'cmd'} = '';
-	if ( defined $ARGV[0] ) {
-	    my $cmd_obj = undef;
-
-	    # argument looks like command
-	    if ( substr( $ARGV[0], 0, 1 ) ne '-' ) {
-		$cmd = shift @ARGV;
-		$c->{'cmd'} = $cmd;
-
-		# valid command
-		if ( $c->is_command($cmd) ) {
-		    $cmd_obj = $c->{'_commands'}->{$cmd};
-		}
-
-		# invalid command
-		else {
-		    $cmd = undef;
-		}
-	    }
-	    my @tARGV = @ARGV;
-	    $c->_parse( \@tARGV, $cmd_obj );
-	}
-	return $cmd;    # default (''), invalid (undef), command ($cmd)
-}
-
-sub _parse {
-	my ( $c, $arg_ref, $cmd_obj ) = (@_);
-
-	# al newkirk: conflict support
-	my @arg_names = ();
-	my @conflicts_with = ();
-
-	# reset any previous value
-	%{ $c->options } = ();
-	@{ $c->argv }    = ();
-
-	while ( my $arg = shift @{$arg_ref} ) {
-
-	    # single option (could be grouped)
-	    if ( $arg =~ m/^\-([^\-\=]+)$/o ) {
-            my @args = split //, $1;
-            foreach (@args) {
-
-		    # _parse_arg returns the options' name
-		    # and its "to_stash" values as an arrayref,
-		    # or undef and an error message.
-		    # TODO: this is a horrible approach I took only
-		    # because it's 4am and I'm in a rush to get it done.
-		    # any attempts to rewrite the parser in order to
-		    # improve it will be **much** appreciated. Thanks!
-		    my ( $opt, $to_stash ) = ( $_, undef );
-		    if ( defined $cmd_obj ) {
-                ( $opt, $to_stash ) = $cmd_obj->_parse_arg($opt);
-                unless ($opt) {
-                    die "Error: $to_stash";
-
-                    # TODO x 2: this should be forwared to an
-                    # overridable help error handler or whatever
-                }
-		    }
-
-		    $c->options->{$opt} =
-		      ( defined $c->options->{$opt} )
-		      ? $c->options->{$opt} + 1
-		      : 1;
-
-		    foreach my $stash_key (@$to_stash) {
-                $c->stash->{$stash_key} =
-                  ( defined $c->stash->{$stash_key} )
-                  ? $c->stash->{$stash_key} + 1
-                  : 1;
-		    }
-		}
-	    }
-
-	    # long option: --name or --name=value
-	    elsif ( $arg =~ m/^\-\-([^\-\=]+)(?:\=(.+))?$/o ) {
-		# original code
-		# my ($key, $val) = ($1, (defined $2 ? $2 : 1));
-
-		# al newkirk: my nasty little hacked in fail safe.
-		# added in default value checking before defaulting to ""
-		my ( $key, $val ) = (
-		    $1,
-		    (
-			defined $2 ? $2
-			: (
-			    defined $cmd_obj->{args}->{$1}->{default}
-			    ? $cmd_obj->{args}->{$1}->{default}
-			    : ""
-			)
-		    )
-		);
-
-	  # al newkirk: when defaulting to a value of one, the type
-	  # if exists, must be changed to "num" avoid attempting to validate "1"
-	  # as "any" or "str" and failing.
-	  # see - App::Rad::Command::_parse_arg
-
-		my $to_stash = undef;
-
-		# TODO: see above TODO :)
-		if ( defined $cmd_obj ) {
-
-		  # WARNING! al newkirk: I am adding an additional parameter
-		  # to the cmd_obj which may break some other code.
-		  # Hopefully not :)
-		  # I am making App::Rad::Command aware of self ($c to be exact)
-		    ( $key, $to_stash ) =
-		      $cmd_obj->_parse_arg( $key, $val, $c );
-		    unless ($key) {
-			die "Error: $to_stash";
-		    }
-		}
-
-		$c->options->{$key} = $val;
-		foreach my $stash_key (@$to_stash) {
-		    $c->stash->{$stash_key} = $val;
-		}
-		# al newkirk: save key/name for conflict validation, etc
-		push ( @arg_names, $key ) if $key;
-		
-		# al newkirk: conflict support
-		push @conflicts_with, { arg => $key, conflict => $cmd_obj->{args}->{$key}->{conflicts_with} }
-		  if defined $cmd_obj->{args}->{$key}->{conflicts_with};
-	    }
-	    else {
-		push @{ $c->argv }, $arg;
-	    }
-	}
-	# al newkirk: conflict support
-	# Note! conflict support currently only works against args using the long option
-	if (@conflicts_with) {
-	    foreach my $name (@arg_names) {
-		if ( grep { $name eq $_->{conflict} } @conflicts_with ) {
-		    my @clist = map { $_->{arg} } @conflicts_with;
-		    die "Error: $name conflicts with ". join(" and ", @clist ) ." and can not be use together.";
-		}
-	    }
-	}
-    }
 
 sub _run_full_round {
 	my $c   = shift;
@@ -561,17 +407,9 @@ sub register_commands {
             if ( $cmd eq '-globals' ) {
                 # use may set it as a flag to enable global arguments
                 # or elaborate on each available argument
-                #my %command_options = ( name => '', code => sub { } );
-                #if ( ref $help_for_sub{$cmd} ) {
-                #    $command_options{opts} = $help_for_sub{$cmd};
-                #}
-                #my $cmd_obj = App::Rad::Command->new( \%command_options );
-                #$c->{'_globals'} = $cmd_obj;
                 # globals is a command named ''
                 $c->register( '', sub {} );
                 # TODO: help showing 'Global options:'
-
-            #                $c->register(undef, undef, $help_for_sub{$cmd});
             }
 
             # user wants to register a valid (existant) sub
@@ -709,7 +547,6 @@ sub run {
 
 	# now we get the actual input from
 	# the command line (someone using the app!)
-#	my $cmd_name = $c->parse_input();
     my $arg = $c->parse_input();
     my $cmd_obj = $c->{'_commands'}->{$c->cmd};
 
@@ -722,8 +559,6 @@ sub run {
 	    $c->debug('no command detected. Falling to default');
 	    $cmd_obj->{code} = $c->{'_functions'}->{'default'};
 	}
-    
-#    $cmd = sub { $obj->run(@_) }
 
 	# run the specified command
 	$c->_run_full_round($cmd_obj, $arg);
@@ -770,7 +605,6 @@ sub execute {
 }
 
 sub argv    { return $_[0]->{'_ARGV'} }
-#sub options { return $_[0]->{'_options'} }
 sub options { return $_[0]->{'_commands'}->{ $_[0]->{'cmd'} }->options }
 sub stash   { return $_[0]->{'_stash'} }
 sub config  { return $_[0]->{'_config'} }
@@ -789,7 +623,6 @@ sub getopt {
 	my ( $c, @options ) = @_;
 
 	# reset values from tinygetopt
-	#$c->{'_options'} = {};
 	#TODO: how the new parser copes with this?
 	%{ $c->options } = ();
 
