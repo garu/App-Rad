@@ -429,7 +429,7 @@ sub execute {
 	    my $cmd_obj = $c->{'_commands'}->{$cmd};
 
 	    # set default values for command (if available)
-	    $cmd_obj->_set_default_values( $c->options, $c->stash );
+	    App::Rad::Parser::set_defaults($cmd_obj);
 
 	    $c->_run_full_round( $cmd_obj, @_ );
 	    return $cmd;
