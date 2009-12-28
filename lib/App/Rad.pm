@@ -685,14 +685,10 @@ sub is_command {
 	    : 0
 	);
 }
-use diagnostics;
-sub command : lvalue {
-	cmd(@_);
-}
 
-sub cmd : lvalue {
-	$_[0]->{'cmd'};
-}
+# TODO: turn 'command' into an alias for ->cmd
+sub command : lvalue { $_[0]->{'cmd'} }
+sub cmd     : lvalue { $_[0]->{'cmd'} }
 
 # - "I'm loving having something else write up the 80% drudge
 #   code for the small things." (benh on Rad)
