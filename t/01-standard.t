@@ -5,7 +5,6 @@ use App::Rad;
 # tests the existance of the API
 my $m = 'App::Rad';
 can_ok($m, 'commands');
-can_ok($m, 'create_command_name');
 can_ok($m, 'run');
 
 #tests the existance of the control functions
@@ -25,6 +24,7 @@ use App::Rad::Include;
 $m = 'App::Rad::Include';
 can_ok($m, 'load');
 can_ok($m, 'include');
+can_ok($m, 'create_command_name');
 
 $m = 'App::Rad::Help';
 can_ok($m, 'load');

@@ -44,19 +44,19 @@ sub _init {
 	#load extensions
 	App::Rad::Help->load($c);
 	foreach (@OPTIONS) {
-	    if ( $_ eq 'include' ) {
-		eval 'use App::Rad::Include; App::Rad::Include->load($c)';
-		Carp::croak 'error loading "include" extension.' if ($@);
+        if ( $_ eq 'include' ) {
+            eval 'use App::Rad::Include; App::Rad::Include->load($c)';
+            Carp::croak 'error loading "include" extension.' if ($@);
 	    }
 	    elsif ( $_ eq 'exclude' ) {
-		eval 'use App::Rad::Exclude; App::Rad::Exclude->load($c)';
-		Carp::croak 'error loading "exclude" extension.' if ($@);
+            eval 'use App::Rad::Exclude; App::Rad::Exclude->load($c)';
+            Carp::croak 'error loading "exclude" extension.' if ($@);
 	    }
 	    elsif ( $_ eq 'debug' ) {
-		$c->{'debug'} = 1;
+            $c->{'debug'} = 1;
 	    }
 	    else {
-		$c->load_plugin($_);
+            $c->load_plugin($_);
 	    }
 	}
 
@@ -335,17 +335,6 @@ sub unregister {
 	}
 }
 
-#TODO: move this to the 'include' plugin
-sub create_command_name {
-	my $id = 0;
-	foreach ( commands() ) {
-	    if (m/^cmd(\d+)$/) {
-            $id = $1 if ( $1 > $id );
-	    }
-	}
-	return 'cmd' . ( $id + 1 );
-}
-
 sub commands {
 	return ( grep { $_ ne '' } keys %{ $_[0]->{'_commands'} } );
 }
@@ -466,14 +455,15 @@ sub getopt {
 	$parser->configure(qw(bundling));
 
 	my @tARGV = @ARGV;    # we gotta stick to our API
+	#FIXME: line below doesn't work with new internal structure
 	my $ret = $parser->getoptions( $c->{'_options'}, @options );
 	@{ $c->argv } = @ARGV;
 	@ARGV = @tARGV;
 
 	return $ret;
-    }
+}
 
-    sub debug {
+sub debug {
 	if ( shift->{'debug'} ) {
 	    print "[debug]   @_\n";
 	}
@@ -938,11 +928,6 @@ Returns a list of available commands (I<functions>) inside your program
 =head2 $c->is_command ( I<COMMAND_NAME> )
 
 Returns 1 (true) if the given I<COMMAND_NAME> is available, 0 (false) otherwise.
-
-
-=head2 $c->create_command_name()
-
-Returns a valid name for a command (i.e. a name slot that's not been used by your program). This goes in the form of 'cmd1', 'cmd2', etc., so don't use unless you absolutely have to. App::Rad, for instance, uses this whenever you try to I<include> (see below) a new command but do not supply a name for it.
 
 
 =head2 $c->load_config( I<< FILE (FILE2, FILE3, ...) >> )

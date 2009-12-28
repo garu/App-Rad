@@ -15,6 +15,10 @@ Revision history for App-Rad
 		******************
 
 		*** API CHANGE *** 
+		** (also note we are voting invalid() for complete removal  **
+		** if you can't live without it, please email me or join us **
+		** in #app-rad at irc.perl.org )                            **
+		**************************************************************
 		if you redefine invalid(), note the invalid command is no longer
 		passed as $c->cmd. This was inconsistent, being it's not an actual
 		command. Now, the invalid subroutine receives 2 arguments: $c and
@@ -27,12 +31,22 @@ Revision history for App-Rad
 		
 		all other subroutines keep receiving just $c as argument.
 		******************
+
+		*** API CHANGE *** 
+		the rarely used create_command_name() method was removed from Rad, or
+		rather -moved- into App::Rad::Include, so if you have code using that,
+		just change your calls from $c->create_command_name() to 
+		App::Rad::Include::create_command_name($c)
+		But you most likely never even heard of it, so don't worry.
+		******************
 		
 	
         $c->path and $c->realpath new auxiliary methods for giving you the
         app's bin path and realbin path (via FindBin core module) - 
 		Added initial Shell-like behavior support via 'App::Rad->shell'
-		Added support for defining specific command arguments and its attributes (thanks ZOSO for suggesting, everybody at #app-rad for discussing its API, and FCO for implementing the first patch)
+		Added support for defining specific command arguments and its attributes 
+		(thanks ZOSO for suggesting, everybody at #app-rad for discussing its API, 
+		and FCO for implementing the first patch)
 		Fixed bug where --option=0 was being set to 1 and not to 0, as expected (FCO)
 		Created experimental App::Rad::Tester to help testing apps created with Rad.
 		Updated documentation

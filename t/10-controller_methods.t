@@ -19,7 +19,7 @@ sub command {
     $c->execute('list_commands');
     $ret .= 'Called: ' . $c->cmd . ' (' . $c->command . ")\n";
 
-    $c->register($c->create_command_name(), sub { return "test" });
+    $c->register('cmd1', sub { return "test" });
     $c->register_command('alias', \&anothercommand, 'this is an alias');
     $c->unregister_command('yetanothercommand');
     $c->unregister('andanotherone');
