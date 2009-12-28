@@ -229,7 +229,16 @@ sub register_commands {
 	    }
 	}
 
-	my $caller = ( caller(2) or 'main' );
+	# hack, prevents registering methods from App::Rad namespace when
+	# using shell-mode - Al Newkirk (awnstudio)
+	# my $caller = ( caller(2) or 'main' );
+	my $caller =
+	    (
+	     caller(2) &&
+	     caller(2) ne 'App::Rad' &&
+	     caller(2) ne 'App::Rad::Shell'
+	    ) ?
+	    caller(2) : 'main';
 	my %subs = _get_subs_from($caller);
 
 	# handles explicit command calls first, as
@@ -399,7 +408,7 @@ sub run {
 sub shell {
 	my $class = shift;
 	require App::Rad::Shell;
-	App::Rad::Shell::shell($class);
+	App::Rad::Shell::shell($class, @_);
 }
 
 sub execute {
@@ -433,6 +442,9 @@ sub argv    { return $_[0]->{'_ARGV'} }
 sub options { return $_[0]->{'_commands'}->{ $_[0]->{'cmd'} }->options }
 sub stash   { return $_[0]->{'_stash'} }
 sub config  { return $_[0]->{'_config'} }
+    
+# get user information via prompting - Al Newkirk (awnstudio)
+sub prompt { return App::Rad::Shell::prompt(@_); }
 
 # $c->plugins is sort of "read-only" externally
 sub plugins {

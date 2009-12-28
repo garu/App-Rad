@@ -6,6 +6,40 @@ use warnings;
 
 our $VERSION = '0.01';
 
+# get input from user via prompting - Al Newkirk (awnstudio)
+sub prompt {
+    my $criteria = pop(@_);
+    my $c 	 = pop(@_);
+    
+    croak 'input prompt criteria must be a hash reference'
+            unless (ref $criteria eq 'HASH');
+    
+    return $c->options->{$criteria->{opt}} if
+	defined $criteria->{opt} && $c->options->{$criteria->{opt}};
+    
+    if ($criteria->{set}) {
+        print $criteria->{ask}, " [ e.g. ", $criteria->{set}, " ] : ";
+    }
+    else {
+        print $criteria->{ask}, " : ";
+    }
+
+    $| = 1;          # force a flush after our print
+    $_ = <STDIN>;    # get the input from STDIN (presumably the keyboard)
+
+    chomp;
+    if ( $_ eq "0" ) {
+        return "0";
+    }
+    else {
+        if ($criteria->{set}) {
+            return $_ ? $_ : $criteria->{set};    # return $_ if it has a value
+        }
+        else {
+            return $_;
+        }
+    }
+}
 
 #    App::Rad->shell( {
 #        prompt     => 'cmd: ',
@@ -23,44 +57,169 @@ sub shell {
     my $prompt = $0;
     $prompt =~ s{\.pl$}{};
 
+    my $params_ref = shift;
+    if ($params_ref) {
+        croak 'argument to shell() method must be a hash reference'
+            unless (ref $params_ref eq 'HASH');
+	$prompt = $params_ref->{prompt} if defined $params_ref->{prompt};
+    }
+    # $c->{'_shell'} = %{ shift() };
+
     eval 'use Term::ReadKey';
     %{$c->{'_shell'}} = (
             'has_readkey' => (defined $@) ? 0 : 1,
             'prompt'      => "$prompt> ",
             'autocomp'    => 1,
 			);
-
-    my $params_ref = shift;
-    if ($params_ref) {
-        croak 'argument to shell() method must be a hash reference'
-            unless (ref $params_ref eq 'HASH');
     
-        #TODO    
+    # process cli request instead of shell - Al Newkirk (awnstudio)
+    if (@ARGV) {
+	return App::Rad->run;
     }
-#    $c->{'_shell'} = %{ shift() };
+    
     $c->_init();
     $c->_register_functions();
 
 	# dirty hack to override 'default' function
 	$c->{'_functions'}->{'default'} = sub {};
-	$c->{'_functions'}->{'invalid'} = sub { return "Invalid command. Type 'help' for a list of commands" };
+	$c->{'_functions'}->{'invalid'} = sub { return "Invalid command. Type help; for a list of commands." };
 
     # this is *before* setup() because the application
     # developer might want to modify the command.
-    $c->register('quit', \&quit, 'exits the shell');
-    $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands');
-
+    $c->register('quit', \&quit, 'exits the command shell.');
+    $c->register('help', \&App::Rad::Help::helpstr, 'show syntax and available commands.');
+    
+    # EXPERIMENTAL - Al Newkirk (awnstudio)
+    # clear shell buffer
+    $c->register('clear', sub {
+	my $c = shift;
+	my $clr = $^O =~ /[Ww]in(32)?/ ? "cls" : "clear";
+	system($clr);
+    }, 'clear text from the screen.');
     
     # then we run the setup to register
     # some commands
     $c->{'_functions'}->{'setup'}->($c);
     
+    # print startup message - Al Newkirk (awnstudio)
+    sub startup_message {
+	my $ref = shift;
+	my $startup_message = "";
+	if (defined $ref->{title}) {
+	    if (ref($ref->{title}) eq "GLOB") {
+		my $fh = ${$ref->{title}};
+		while (<$fh>) {
+		    $startup_message .= "$_";
+		}
+		# replace filehandle with content :)
+		$ref->{title} = $startup_message;
+	    }
+	    elsif (ref($ref->{title}) eq "ARRAY") {
+		$startup_message .=
+		    join($/, map {chomp $_; $_} @{$ref->{title}});
+	    }
+	    else {
+		$startup_message = $ref->{title};
+	    }
+	    $startup_message .= "\n";
+	}
+	return ($startup_message || "") . 
+	    "Type help; for a list of available commands, and quit; to quit.\n" .
+	    "Execute commands [w/ or wo/ options] using a ; at the end of the line.\n";
+    }
+    print startup_message($params_ref);
+    
+    # EXPERIMENTAL - Al Newkirk (awnstudio)
+    # create synonyms for quit :)
+    #    $c->{'_commands'}->{'exit'} = $c->{'_commands'}->{'quit'} unless
+    #	defined $c->{'_commands'}->{'q'};
+    #    $c->{'_commands'}->{'q'} = $c->{'_commands'}->{'quit'} unless
+    #	defined $c->{'_commands'}->{'q'};
+    
+    # Adding multi-line read support - Al Newkirk (awnstudio)
+    my $multiline_read   = 0;
+    my @multiline_buffer = ();
+    
     do {
-		print $c->{'_shell'}->{'prompt'};
-        @ARGV = split /\s+/, <>;
-        $c->_get_input();
-        $c->execute();
-    } while (1);
+	print $c->{'_shell'}->{'prompt'};
+        # get command and options - Al Newkirk (awnstudio)
+	my $cmd  = join " ", split /\s+/, <>;
+	my @opts = ();
+	if ($cmd) {
+	    if ($cmd =~ /\;(\s+)?$/) {
+		
+		my $lp = $c->{'_shell'}->{'prompt'};
+		$lp  =~ s/\s+$//g;
+		$cmd =~ s/^$lp//;
+		
+		# what kind of multiline?
+		if ($multiline_read) {
+		    # build command
+		    push @multiline_buffer,
+		        split /\s+(?![\w]+["'])/, $cmd;
+		    ($cmd, @opts) = @multiline_buffer;
+		    # reset 
+		    $c->{'_shell'}->{'prompt'} = "$prompt> ";
+		    $multiline_read   = 0;
+		    @multiline_buffer = ();
+		}
+		else {
+		    # hack for one-liners, may break something :\
+		    # Al Newkirk (awnstudio)
+		    if ($cmd =~ /^\w+\s(\w+|-+\w+(=\w+)?).*;/) {
+			($cmd, @opts) = $cmd =~ /^(\w+)\s(.*)/;
+		    }
+		}
+		
+		$cmd =~ s/\;$//;
+		$opts[0] =~ s/\;(\s+)?$// if @opts;
+		$opts[$#opts] =~ s/\;(\s+)?$// if @opts;
+		
+		# process commands
+		if (defined $c->{_commands}->{$cmd}) {
+		    # hack for clear buffer function - Al Newkirk (awnstudio)
+		    if (lc($cmd) eq "clear") {
+			$c->{_commands}->{$cmd}->run($c);
+			print startup_message($params_ref);
+		    }
+		    else {
+			# seperate params by space
+			my @psuedo_argvs = ();
+			@opts = split /\s+(?![\w]+["'])/, join " ", @opts;
+			foreach my $opt (@opts) {
+			    $opt =~ s/(^\s+|\s+$)//g;
+			    if ($opt =~ /^(\-+)(\w+)=(['"])(.+)(['"])/)
+			    {
+				$opt = "$1$2=$4" if $1 && $2 && $4;
+			    }
+			    push @psuedo_argvs, $opt if $opt;
+			}
+			$c->_parse(\@psuedo_argvs, $c->{_commands}->{$cmd});
+			print $c->{_commands}->{$cmd}->run($c), "\n";
+			# reset parameters to avoid collision - Al Newkirk (awnstudio)
+			# possbily not good :\
+			delete $c->{_commands}->{$cmd}->{args};
+		    }
+		}
+		else {
+		    print $c->{'_functions'}->{'invalid'}->(), "\n";
+		}
+		
+	    }
+	    else {
+		my $mlp =
+		    $c->{'_shell'}->{'prompt'} =
+			("-" x length($prompt)) . "> ";
+		$mlp =~ s/\s+$//g;
+		$cmd =~ s/^$mlp//;
+		if ($cmd) {
+		    push @multiline_buffer,
+		        split /\s+(?![\w]+["'])/, $cmd;
+		}
+		$multiline_read = 1;
+	    }
+	}
+    } 	while (1);
 }
 
 sub quit {
@@ -70,6 +229,7 @@ sub quit {
 }
 
 42;
+
 __END__
 
 =head1 NAME
