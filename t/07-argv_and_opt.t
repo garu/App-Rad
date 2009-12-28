@@ -4,7 +4,7 @@ use App::Rad::Tester;
 # kids, don't try this at home...
 @ARGV = qw(commandname bla -x -abc --def --test1=0 --test2=test ble -vvv -x);
 my $c = get_controller;
-$c->parse_input();
+parse_input($c);
 
 is(scalar @ARGV, 10, '@ARGV should have all 10 elements when Rad finds an invalid command');
 is(scalar @{$c->argv}, 2, '$c->argv should have 2 arguments');
@@ -39,7 +39,7 @@ is($c->options->{'x'}, 2, "single arguments can be incremented when invoked sepa
 @ARGV = qw(commandname bla -x -abc --def --test1=0 --test2=test ble -vvv -x);
 $c = get_controller;
 $c->register(commandname, sub {});
-$c->parse_input();
+parse_input($c);
 
 is(scalar @{$c->argv}, 2, '$c->argv should have 2 arguments');
 is(keys %{$c->options}, 8, '$c->options should have 8 elements');

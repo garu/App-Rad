@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use base 'Exporter';
-our @EXPORT = qw(test_app get_controller);
+our @EXPORT = qw(test_app get_controller parse_input);
 
 sub get_controller {
     # kids, don't try this at home...
@@ -12,6 +12,12 @@ sub get_controller {
     bless $c, 'App::Rad';
     $c->_init();
     return $c;
+}
+
+sub parse_input {
+    my $c = shift;
+    require App::Rad::Parser;
+    App::Rad::Parser::parse_input($c);
 }
 
 sub test_app {

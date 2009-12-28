@@ -9,7 +9,7 @@ use App::Rad::Tester;
 @ARGV = qw(-x -abc --def --test1=2 --test2=test commandname -vvv -x ble --test1=3);
 my $c = get_controller;
 $c->register('commandname', sub {});
-$c->parse_input();
+parse_input($c);
 
 TODO: {
     local $TODO = 'how should we handle @ARGV in such cases?';

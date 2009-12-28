@@ -13,7 +13,7 @@ SKIP: {
     $c->register('herculoids', sub {});
 
     # kids, don't try this at home...
-    $c->parse_input();
+    parse_input($c);
 
     $c->getopt(
             'igoo|i=s',
