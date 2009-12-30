@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use LWP::Simple ();
+use YAML::Tiny  ();
+
+use App::Rad;
+App::Rad->run;
+
+sub pre_process {
+    my $c = shift;
+
+    # we only care if we have a command set
+    return if !$c->cmd or $c->cmd eq 'help';
+
+    # turn user arguments into a query string
+    unless ( $c->stash->{query} = join '+', @{ $c->argv } ) {
+        print "please provide an argument for '" . $c->cmd . "'\n";
+        $c->{cmd} = 'help'; # TODO: wtf the lvalue accessor isn't working?
+        return;
+    }
+
+    if ( $c->cmd eq 'search' ) {
+        print "Searching github repositories for '" . $c->stash->{query} . "'...\n";
+    }
+}
+
+sub search :Help('query' - search repositories) {
+    my $c = shift;
+    my $ret;
+
+    if ( my $content = LWP::Simple::get('http://github.com/api/v2/yaml/repos/search/' . $c->stash->{query}) ) {
+        if ( $c->options->{v} ) {
+            $ret = $content;
+        }
+        else {
+            print "use -v for more details in your search\n";
+            $ret = _filter($content);
+        }
+    }
+    else {
+        return "Error performing query, please try again later...";
+    }
+    return $ret;
+}
+
+
+sub _filter {
+    my $content = shift;
+    my $yaml = YAML::Tiny->new->read_string($content);
+
+    my $ret = "Repositories found:\n\n";
+    foreach my $repo ( @{ $yaml->[0]->{repositories} } ) {
+        $ret .= '   ' . $repo->{name} . ' (' . $repo->{description} . ') - by ' . $repo->{username} . "\n";
+    }
+    return $ret;
+}
