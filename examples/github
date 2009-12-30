@@ -3,9 +3,6 @@
 use strict;
 use warnings;
 
-use LWP::Simple ();
-use YAML::Tiny  ();
-
 use App::Rad;
 App::Rad->run;
 
@@ -15,6 +12,7 @@ sub pre_process {
     # we only care if we have a command set
     return if !$c->cmd or $c->cmd eq 'help';
 
+
     # turn user arguments into a query string
     unless ( $c->stash->{query} = join '+', @{ $c->argv } ) {
         print "please provide an argument for '" . $c->cmd . "'\n";
@@ -22,38 +20,102 @@ sub pre_process {
         return;
     }
 
-    if ( $c->cmd eq 'search' ) {
-        print "Searching github repositories for '" . $c->stash->{query} . "'...\n";
-    }
+    print "Searching github repositories for '" . $c->stash->{query} . "'...\n";
 }
 
-sub search :Help('query' - search repositories) {
+#==========================#
+#         Commands         #
+#==========================#
+
+sub search :Help(search github repositories) {
     my $c = shift;
     my $ret;
 
-    if ( my $content = LWP::Simple::get('http://github.com/api/v2/yaml/repos/search/' . $c->stash->{query}) ) {
+    if ( my $content = _get_repositories($c->stash->{query}) ) {
         if ( $c->options->{v} ) {
             $ret = $content;
         }
         else {
             print "use -v for more details in your search\n";
-            $ret = _filter($content);
+            $ret = _filter($c, $content);
         }
     }
     else {
-        return "Error performing query, please try again later...";
+        $ret = "Error performing query, please try again later...";
     }
     return $ret;
 }
 
+sub clone :Help(clone a github repository) {
+    my $c = shift;
+
+    _filter($c, _get_repositories($c->stash->{query}));
+    my $repo_count = scalar @{ $c->stash->{repositories} };
+    return unless $repo_count > 0;
+
+    my $chosen = ( $repo_count == 1 ? 0 : undef );
+    while ( not defined $chosen ) {
+        print "Available repositories ($repo_count) :\n";
+        foreach my $id ( 1 .. $repo_count ) {
+            my $repo = $c->stash->{repositories}->[$id];
+            print "   $id - " . $repo->{name} . ' (' . $repo->{description} . ') - by ' . $repo->{username} . "\n";
+        }
+
+        # TODO: $c->prompt ?
+        print 'Please chose a repository: ';
+        chomp (my $input = <STDIN>);
+        if ( $c->stash->{repositories}->[$input - 1] ) {
+            $chosen = $input - 1;
+        }
+        else {
+            print "Invalid repository. Please try again.\n";
+        }
+    }
+
+    my $repo      = $c->stash->{repositories}->[$chosen];
+    my $clone_url = 'git://github.com/' . $repo->{username} . '/' . $repo->{name} . '.git';
+
+    return _git('clone', $clone_url);
+}
+
+
+#================================#
+#       Auxiliary routines       #
+#================================#
+
+sub _git {
+#    my $git = IPC::Cmd::can_run('git')
+#        or return "Fatal: couldn't find 'git' binary in you PATH\n";
+
+    if (system('git', @_) == 0) {
+        return 'Success!';
+    }
+    else {
+        return 'Error :(';
+    }
+}
+
+sub _get_repositories {
+    require LWP::Simple;
+    return LWP::Simple::get('http://github.com/api/v2/yaml/repos/search/' . shift) 
+}
 
 sub _filter {
-    my $content = shift;
+    my ($c, $content) = (@_);
+
+    require YAML::Tiny;
     my $yaml = YAML::Tiny->new->read_string($content);
+
+    return 'Sorry, no repositories found.' 
+        unless $yaml and $yaml->[0]->{repositories};
 
     my $ret = "Repositories found:\n\n";
     foreach my $repo ( @{ $yaml->[0]->{repositories} } ) {
         $ret .= '   ' . $repo->{name} . ' (' . $repo->{description} . ') - by ' . $repo->{username} . "\n";
     }
+
+    # put the YAML in the stash, in case we need it
+    $c->stash->{repositories} =$yaml->[0]->{repositories};
+
     return $ret;
 }
