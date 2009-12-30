@@ -152,13 +152,14 @@ sub _register_functions {
 
 sub _run_full_round {
 	my $c   = shift;
-	my $cmd = shift;
 
 	$c->debug('calling pre_process function...');
 	$c->{'_functions'}->{'pre_process'}->($c);
 
+ 	my $cmd_obj = $c->{'_commands'}->{ $c->cmd };
+
 	$c->debug('executing command...');
-	$c->{'output'} = $cmd->run($c, @_);
+	$c->{'output'} = $cmd_obj->run($c, @_);
 
 	$c->debug('calling post_process function...');
 	$c->{'_functions'}->{'post_process'}->($c);
