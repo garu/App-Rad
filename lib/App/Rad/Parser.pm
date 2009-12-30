@@ -14,22 +14,18 @@ sub parse_input {
     my $slurp = 0;
     my $invalid;
 
-print STDERR ">>> starting parser\n";
     # we start with the global command
     #my $current_command = $c->{'_globals'};
     my $current_command = $c->{'_commands'}->{''};
     my ($option_name, $option_value, $arguments_left);
     
     while (my $token = shift @input) {
-print STDERR ">>> token is '$token'\n";
         # '--' marks the end of options
         if ($token eq '--') {
-print STDERR ">>> slurping...\n";
             $slurp = 1;
         }
         # option found
         elsif ( $token =~ s/^-// ) {
-print STDERR ">>> option found\n";
             Carp::croak "Missing $arguments_left argument(s) for option $option_name"
                 if $arguments_left;
             
@@ -39,39 +35,29 @@ print STDERR ">>> option found\n";
             #if ( $token =~ m/^(?:-([^=]+)(?:=(.+))?)|([^-=])+=(.+)$/o ) {
             if ( $token =~ m/^(?:-([^=]+)(?:=(.+))?|([^-=]+)=(.+))$/o ) {
                 ($option_name, $option_value) = (defined $4 ? ($3, $4) : ($1, $2));
-print STDERR ">>> -foo=bar, --foo, --foo=bar\n";
             }
             # -foo
             else {
-print STDERR ">>> -foo\n";
                 my @flags = split //, $token;
                 # -f -o -o (if all elements are valid options, we push them back)
                 if (@flags > 1
                  && @flags == (grep { $current_command->is_option($_) } @flags) ) {
-print STDERR ">>> '@flags' are valid options, pushing them back\n";
                     unshift @input, map { '-' . $_ } @flags;
                     next;
                 }
                 # otherwise, -foo means the "foo" option
                 else {
-print STDERR ">>> '$token' means the '$token' option\n";
                     ($option_name, $option_value) = ($token, undef);
                 }
             }
-print STDERR ">>> setting option '$option_name' with value '$option_value'\n";
             $arguments_left = $current_command->setopt($option_name, $option_value);
-print STDERR ">>> returned $arguments_left as the number of arguments left for that option\n";
         }
         # when in slurp mode, tokens are arguments
         elsif ($slurp or $arguments_left) {
-print STDERR ">>> we are in slurp mode, or there are arguments left\n";
             if (defined $option_name) {
-print STDERR ">>> pushing yet another argument to option '$option_name' (value: '$token')\n";
                 $arguments_left = $current_command->setopt($option_name, $token);
-print STDERR ">>> number of arguments left for option '$option_name': $arguments_left\n";
             }
             else {
-print STDERR ">>> pushing token '$token' to c->argv queue\n";
                 push @{$c->argv}, $token;
             }
         }
@@ -79,18 +65,15 @@ print STDERR ">>> pushing token '$token' to c->argv queue\n";
         # TODO: should we allow it in all cases?
         # TODO: parsing chained commands
         elsif ( defined $c->cmd or defined $invalid) {
-print STDERR ">>> we already have a command, push token '$token' to c->argv queue\n";
             push @{$c->argv}, $token;
         }
         # it's a command, and no previous command was set
         elsif ( $c->is_command($token) ) {
             $current_command = $c->{'_commands'}->{$token};
             $c->cmd = $current_command->name;
-print STDERR ">>> got command: '" . $c->cmd . "'\n";
         }
         # it's an invalid command
         else {
-print STDERR ">>> TODO: invalid command\n";
             $invalid = $token; #TODO: pass it as something else, maybe?
             # return;
             # set as invalid and mark $c->cmd, but keep parsing the invalid
@@ -103,10 +86,10 @@ print STDERR ">>> TODO: invalid command\n";
 
     # TODO: this should be done whenever a command is 'done', 
     # not when the input is over
-    check_required($current_command);    # TODO: this goes into Parser.pm
-    check_conflicts($current_command);   # TODO: this goes into Parser.pm
-    set_defaults($current_command);      # TODO: this goes into Parser.pm
-    push_to_stash($c, $current_command); # TODO: this goes into Parser.pm
+    check_required($current_command);
+    check_conflicts($current_command);
+    set_defaults($current_command);
+    push_to_stash($c, $current_command);
     
     # let caller know if command was set or if we'll use the default
     $c->cmd = '' unless defined $c->cmd;
