@@ -59,7 +59,7 @@ sub clone :Help(clone a github repository) {
     while ( not defined $chosen ) {
         print "Available repositories ($repo_count) :\n";
         foreach my $id ( 1 .. $repo_count ) {
-            my $repo = $c->stash->{repositories}->[$id];
+            my $repo = $c->stash->{repositories}->[$id - 1];
             print "   $id - " . $repo->{name} . ' (' . $repo->{description} . ') - by ' . $repo->{username} . "\n";
         }
 
