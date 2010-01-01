@@ -25,10 +25,14 @@ sub usage {
     return "Usage: $0 command [arguments]" unless $cmd;
     my %options = %{ $c->{'_commands'}->{$cmd}->{opts} };
     my @opts;
-    @opts = map {"-" . ("-" x (length != 1)) . "$_=" . uc($options{$_}->{type})}
-            grep {$options{$_}->{required}} keys %options;
-    push @opts, map {"[-" . ("-" x (length != 1)) . "$_=" . uc($options{$_}->{type}) . "]"}
-            grep {not $options{$_}->{required}} keys %options;
+    @opts = map {"-" . ("-" x (length != 1)) . "$_="
+            . (join " ", ((uc($options{$_}->{type}))
+               x (exists $options{$_}->{arguments} ? $options{$_}->{arguments} : 1))) }
+                  sort grep {$options{$_}->{required}} keys %options;
+    push @opts, map {"[-" . ("-" x (length != 1)) . "$_="
+            . join(" ", (uc($options{$_}->{type}))
+               x (exists $options{$_}->{arguments} ? $options{$_}->{arguments} : 1)) . "]"}
+                  sort grep {not $options{$_}->{required}} keys %options;
     #print $c->{'_commands'}->{$cmd}, $/;
     
     return "Usage: $0 $cmd @opts";
