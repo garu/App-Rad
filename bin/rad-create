@@ -13,7 +13,6 @@ sub setup {
                       {
                        rewrite => {
                                    type      => "str",
-                                   required  => 1,
                                    condition => sub{
                                                     my @funcs = split /,/, shift;
                                                     @funcs == grep {m/^(?:setup|pre_process|post_process|default|invalid)$/}
