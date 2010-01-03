@@ -22,7 +22,7 @@ The fact that they are reserved subroutine names just means you don't get to cal
 
 B<Short answer:> If you wish to print anything returned by commands (including Rad's automatic 'help' command), make sure to call C<< $c->post_process >> at the end of your own post_process sub.
 
-B<Long answer:> As you may know, Rad stores returned values from commands on C<< $c->output >>, and leaves all output treatment to post_process. This enables you to manipulate the output of your commands as you see fit (such as mailing them, adding them to a database, parsing it into a specific format, etc). If you override post_process, you need to remember to actually print the output afterwards. This can easily be acomplished with:
+B<Long answer:> As you may know, Rad stores returned values from commands on C<< $c->output >>, and leaves all output treatment to post_process. This enables you to manipulate the output of your commands as you see fit (such as mailing them, adding them to a database, parsing it into a specific format, etc). If you override C<post_process>, you need to remember to actually print the output afterwards. This can easily be acomplished with:
 
    if ($c->output) {
        print $c->output . "\n";
@@ -67,4 +67,39 @@ The "help" command is registered by Rad automatically. To disable it, just unreg
        $c->register_commands(); 
    }
 
-=head2 How do I explicitly Rad's internal "help" command?
+=head2 How do I explicitly call Rad's internal "help" command?
+
+TODO
+
+=head2 Help! Rad thinks imported functions from other modules are commands!
+
+B<Short answer:> Just use C<< namespace::autoclean >> in your programs.
+
+B<Long answer:> Rad looks into your namespace at I<runtime> for commands. So whatever functions you have in there will show as commands. Florian Ragwitz's excellent L<< namespace::autoclean >> keeps all imports out of your namespace at I<compile time>, so they still work inside your app but won't be turned into commands.
+
+To help illustrate, here is a Rad program that imports (and uses) some outisde functions:
+
+  use App::Rad;
+  
+  # load auxiliary modules
+  use Data::Dumper;
+  use Scalar::Util qw(looks_like_number);
+  use List::MoreUtils qw(any);
+  
+  # make everything clean for Rad
+  use namespace::autoclean;
+  
+  App::Rad->run;
+  
+  sub somecommand {
+     my $c = shift;
+  
+     if ( any { looks_like_number($_) } @{ $c->argv } ) {
+        return Dumper $c->options;
+     }
+     else {
+        return 'try setting a numeric arg and some options!';
+     }
+  }
+
+If you remove the C<< use namespace::autoclean >> call, then 'Dumper', 'any' and 'looks_like_number' will all appear as commands, which is not what you want. Alternatively, you can prevent importing by adding a C<< () >> next to each C<use> call, or go with C<require> instead. See L<use> and L<require> for more information on package loading.
