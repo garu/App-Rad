@@ -41,21 +41,28 @@ Revision history for App-Rad
 		******************
 		
 	
-        $c->path and $c->realpath new auxiliary methods for giving you the
-        app's bin path and realbin path (via FindBin core module) - 
-		Added initial Shell-like behavior support via 'App::Rad->shell'
-		Added support for defining specific command arguments and its attributes 
-		(thanks ZOSO for suggesting, everybody at #app-rad for discussing its API, 
-		and FCO for implementing the first patch)
-		Fixed bug where --option=0 was being set to 1 and not to 0, as expected (FCO)
-		Created experimental App::Rad::Tester to help testing apps created with Rad.
-		Updated documentation
-		
-		Added dynamic type setting for values that are set automatically [al newkirk]
-		Added default value support for argument options default setting [al newkirk]
-		Added argument conflict detection [al newkirk]
-		Added stash storing support [al newkirk]
-		Updated alias support [al newkirk]
+        - $c->path and $c->realpath new auxiliary methods for giving you the
+          app's bin path and realbin path (via FindBin core module) 
+        - Added initial Shell-like behavior support via 'App::Rad->shell'
+          (thanks AWNSTUDIO for making major tests and improvements on the 
+          first beta)
+		- Added support for defining specific command arguments and its 
+          attributes (thanks ZOSO for suggesting, everybody at #app-rad for 
+          discussing its API, and FCO for implementing the first patch)
+		- Fixed bug where --option=0 was being set to 1 and not to 0, as 
+          expected (FCO)
+        - Fixed bug where plugin names were added more than once to the 
+          plugins() list
+		- Created experimental App::Rad::Tester to help testing apps created 
+          with Rad.
+		- Updated documentation
+		- Added dynamic type setting for values that are set automatically 
+          [al newkirk]
+		- Added default value support for argument options default setting 
+          [al newkirk]
+		- Added argument conflict detection [al newkirk]
+		- Added stash storing support [al newkirk]
+		- Updated alias support [al newkirk]
 
 1.04	2009/05/04
 
