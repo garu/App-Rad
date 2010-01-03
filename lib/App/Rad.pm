@@ -102,10 +102,9 @@ sub load_plugin {
 
 	    *{"$class\::$method"} = $methods{$method};
 	    $c->debug("-- method '$method' added [$plugin_fullname]");
-
-	    # fill $c->plugins()
-	    push @{ $c->{'_plugins'} }, $plugin;
 	}
+    # add plugin to $c->plugins() list
+    push @{ $c->{'_plugins'} }, $plugin;
 }
 
 # this function browses a file's
