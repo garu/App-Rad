@@ -15,34 +15,75 @@ sub load {
 # such as "myapp.pl help command"
 sub help {
     my $c = shift;
-    return usage() . "\n\n" . helpstr($c);
+    return usage($c) . "\n\n" . helpstr($c);
 }
 
 sub usage {
-    return "Usage: $0 command [arguments]";
+    my $c = shift;
+    my $cmd;
+    $cmd = $c->argv->[0] if $c->is_command($c->argv->[0]);
+    return "Usage: $0 command [arguments]" unless $cmd;
+    my %options = %{ $c->{'_commands'}->{$cmd}->{opts} };
+    my @opts;
+    @opts = map {"-" . ("-" x (length != 1)) . "$_="
+            . (join " ", ((uc($options{$_}->{type}))
+               x (exists $options{$_}->{arguments} ? $options{$_}->{arguments} : 1))) }
+                  sort grep {$options{$_}->{required}} keys %options;
+    push @opts, map {"[-" . ("-" x (length != 1)) . "$_="
+            . join(" ", (uc($options{$_}->{type}))
+               x (exists $options{$_}->{arguments} ? $options{$_}->{arguments} : 1)) . "]"}
+                  sort grep {not $options{$_}->{required}} keys %options;
+    #print $c->{'_commands'}->{$cmd}, $/;
+    
+    return "Usage: $0 $cmd @opts";
 }
 
 sub helpstr {
     my $c = shift;
-    
-    my $string = "Available Commands:\n";
+    my $cmd;
+    $cmd = $c->argv->[0] if $c->is_command($c->argv->[0]);
+    unless($cmd) {
+        my $string = "Available Commands:\n";
 
-    # get length of largest command name
-    my $len = 0;
-    foreach ( sort $c->commands() ) {
-        $len = length($_) if (length($_) > $len);
-    }
 
-    # format help string
-    foreach ( sort $c->commands() ) {
-        $string .= sprintf "    %-*s\t%s\n", $len, $_, 
-                           defined ($c->{'_commands'}->{$_}->help)
-                           ? $c->{'_commands'}->{$_}->help
-                           : ''
-                           ;
-                ;
+        # get length of largest command name
+        my $len = 0;
+        foreach ( sort $c->commands() ) {
+            $len = length($_) if (length($_) > $len);
+        }
+
+        # format help string
+        foreach ( sort $c->commands() ) {
+            $string .= sprintf "    %-*s\t%s\n", $len, $_, 
+                               defined ($c->{'_commands'}->{$_}->help)
+                               ? $c->{'_commands'}->{$_}->help
+                               : ''
+                               ;
+                    ;
+        }
+        return $string;
+    } else {
+        my %options = %{ $c->{'_commands'}->{$cmd}->{opts} };
+        my $string = "Available Options:\n";
+
+
+        # get length of largest command name
+        my $len = 0;
+        foreach ( sort keys %options ) {
+            $len = length($_) if (length($_) > $len);
+        }
+
+        # format help string
+        foreach ( sort keys %options ) {
+            $string .= sprintf "    %-*s\t%s\n", $len, $_, 
+                               defined ($options{$_}->{help})
+                               ? $options{$_}->{help}
+                               : ''
+                               ;
+                    ;
+        }
+        return $string;
     }
-    return $string;
 }
     
 

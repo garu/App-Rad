@@ -1,0 +1,198 @@
+#!/usr/bin/perl
+
+use App::Rad;
+use B::Deparse;
+
+App::Rad->run;
+
+sub setup {
+   my $c = shift;
+
+   $c->register(
+                'app' => \&app,
+                      {
+                       rewrite => {
+                                   type      => "str",
+                                   condition => sub{
+                                                    my @funcs = split /,/, shift;
+                                                    @funcs == grep {m/^(?:setup|pre_process|post_process|default|invalid)$/}
+                                                       @funcs;
+                                                   },
+                                   error_msg => "func not recognized",
+                                   to_stash  => ["funcs"],
+                                   aliases   => [qw/funcs func function/],
+                                   help      => "Funcs to rewrite"
+                                  },
+                       commands => {
+                                    type      => "str",
+                                    error_msg => "must be a list of commands",
+                                    to_stash  => ["commands"],
+                                    aliases   => [qw/command cmds cmd/],
+                                    help      => "List of commands"
+                                  },
+                       plugins => {
+                                   type      => "str",
+                                   error_msg => "must be a list of plugins",
+                                   to_stash  => ["plugins"],
+                                   aliases   => [qw/plugin/],
+                                   help      => "List of plugins"
+                                  },
+                      },
+               );
+   $c->register(
+                'plugin' => \&plugin,
+                      {
+                       version => {
+                                   type      => "str",
+                                   condition => sub{shift() =~ m/^[\d\._]+$/},
+                                   error_msg => "must be a version number",
+                                   to_stash  => ["version"],
+                                   help      => "Version of plugin",
+                                  },
+                       functions => {
+                                      type      => "str",
+                                      error_msg => "must be a list of functions",
+                                      to_stash  => ["funcs"],
+                                      aliases   => [qw/function funcs func/],
+                                      help      => "List of functions"
+                                    },
+                       distro  => {type => "str",},
+                       dir     => {type => "str",},
+                       builder => {type => "str",},
+                       license => {type => "str",},
+                       author  => {type => "str",},
+                       email   => {type => "str",},
+                       verbose => {type => "str",},
+                       force   => {type => "num",},
+                       "no-module-starter" => {
+                                               type     => "num",
+                                               default  => 0,
+                                               to_stash => ["no-module-starter"],
+                                               help     => "Bool, 0 if want to use Module::Starter",
+                                              },
+                       },
+               );
+}
+
+sub post_process {
+   my $c = shift;
+
+   if(exists $c->stash->{file}){
+      open $FILE, ">", $c->stash->{file} or die $!;
+      print {$FILE} $c->output, $/;
+      close $FILE;
+   } else {
+      App::Rad::post_process($c);
+   }
+}
+
+sub plugin :Help(create a new App::Rad plugin) {
+   my $c = shift;
+   die "A plugin name is needed$/" unless @{ $c->argv };
+
+   my @modules = map {m/^App::Rad::Plugin::/ or s/^\+//g? $_ : "App::Rad::Plugin::$_"} @{ $c->argv };
+
+   if(not $c->stash->{"no-module-starter"}) {
+      eval "use Module::Starter";
+      die $@ if $@;
+      Module::Starter->create_distro(
+         distro  => $c->stash->{distroname},
+         modules => \@modules,
+         dir     => $c->stash->{dirname},
+         builder => $c->stash->{Module::Build},
+         license => $c->stash->{license},
+         author  => $c->stash->{author} || (getpwuid($>))[0],
+         email   => $c->stash->{email} || (gethostent)[1] . '@' . (getpwuid($>))[0],
+         verbose => $c->stash->{verbose} || 1,
+         force   => $c->stash->{force},
+      );
+   }
+   else {
+      die "Just accept one module name if you don't have Module::Starter installed" if @{ $c->argv } > 1;
+      #$c->stash->{file} = "$1.pm" if $c->argv->[0] =~ /::(\w+?)$/;
+      my $name = $c->argv->[0];
+      my $return = "package $name;";
+      my @funcs = grep {m/^[a-zA-Z_]\w+$/} split /,/, $c->stash->{funcs};
+      @funcs = ("function1", "function2") unless @funcs;
+      for my $func (@funcs) {
+         $return .= <<"END";
+sub $func {
+   my \$c = shift;
+   "$func"
+}
+END
+      }
+      @ARGV=(), Perl::Tidy::perltidy(source => \$return, destination => \$return)
+         if eval "require Perl::Tidy";
+      $return
+   }
+}
+
+sub app :Help(create a new App::Rad application) {
+   my $c = shift;
+
+   $c->stash->{file} = shift @{ $c->argv } if @{ $c->argv };
+
+   if(exists $c->options->{"rewrite"}) {
+      $c->stash->{rewrite} = [
+                              grep {m/^(?:setup|pre_process|post_process|default|invalid)$/}
+                                 split /,/, $c->options->{"rewrite"}
+                             ];
+   }
+   if(exists $c->options->{"commands"}) {
+      $c->stash->{commands} = [split /,/, $c->options->{"commands"}];
+   }
+   if(exists $c->options->{"plugins"}) {
+      $c->stash->{plugins} = [split /,/, $c->options->{"plugins"}];
+      for my $plug (@{$c->stash->{plugins}}) {
+         my $plugin;
+         if($plug =~ /^\+/){
+            ($plugin = $plug) =~ s/^\+//;
+         } else {
+            $plugin = "App::Rad::Plugin::$plug";
+         }
+         eval "use $plugin";
+         die $@ if $@;
+      }
+   }
+   $c->stash->{pod} = {
+                       pre_code     => q{## Inicio do POD...}             ,
+                       post_code    => q{## Final do POD...}              ,
+                       pre_process  => q{## POD sobre o pre_process()}    ,
+                       post_process => q{## POD sobre o post_process()}   ,
+                       setup        => q{## POD sobre o setup()}          ,
+                       default      => q{## POD sobre o default()}        ,
+                       invalid      => q{## POD sobre o invalid()}        ,
+                       command      => q{## POD sobre o comando [% cmd %]},
+                      };
+
+   my $deparse = B::Deparse->new;
+
+   my $return;
+   if(exists $c->stash->{plugins} and ref $c->stash->{plugins} eq "ARRAY" and @{$c->stash->{plugins}}){
+      $return = sprintf "use App::Rad qw(%s);$/App::Rad->run;$/$/",
+         join " ", @{$c->stash->{plugins}}
+   } else {
+      $return = "use App::Rad;$/App::Rad->run;$/$/";
+   }
+   my @rewrite;
+   my @funcs;
+   push @funcs, $c->stash->{pod}->{"pre_code"};
+   for my $func (@{$c->stash->{rewrite}}) {
+      my $code = $deparse->coderef2text(\&{"App::Rad::$func"});
+      $code =~ s/\s*(?:package\s+[\w:]+;|use\s+(?:strict|warnings)\s*.*?;)\s*//g;
+      push @funcs, $c->stash->{pod}->{$func};
+      push @funcs, "sub $func $code";
+   }
+   for my $cmd (exists $c->stash->{commands} ? @{$c->stash->{commands}} : qw<command1 command2>){
+      (my $pod = $c->stash->{pod}->{command}) =~ s/\[%\s*cmd\s*%\]/$cmd/g;
+      push @funcs, $pod;
+      push @funcs, "sub $cmd" . "{$/my \$c = shift;$/\"$cmd\"}";
+   }
+   push @funcs, $c->stash->{pod}->{"post_code"};
+   $return .= join $/, @funcs;
+   @ARGV=(), Perl::Tidy::perltidy(source => \$return, destination => \$return)
+      if eval "require Perl::Tidy";
+
+   $return
+}

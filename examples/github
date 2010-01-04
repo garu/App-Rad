@@ -75,7 +75,15 @@ sub clone :Help(clone a github repository) {
     }
 
     my $repo      = $c->stash->{repositories}->[$chosen];
-    my $clone_url = 'git://github.com/' . $repo->{username} . '/' . $repo->{name} . '.git';
+    my $clone_url;
+    if(not $c->options->{proto} or lc($c->options->{proto}) eq "git"){
+        $clone_url = 'git://github.com/' . $repo->{username} . '/' . $repo->{name} . '.git';
+    } elsif(lc($c->options->{proto}) eq "http"){
+        $clone_url = 'http://github.com/' . $repo->{username} . '/' . $repo->{name} . '.git';
+    } else {
+        my $proto = $c->options->{proto};
+        return "Proto $proto not recognized";
+    }
 
     return _git('clone', $clone_url);
 }
@@ -93,7 +101,7 @@ sub _git {
         return 'Success!';
     }
     else {
-        return 'Error :(';
+        return "Error :($!)";
     }
 }
 
