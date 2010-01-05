@@ -44,7 +44,16 @@ sub new_app {
 #    diag (Dumper($c));
     return $c;
 }
-my $c;
+
+sub new_app_with_args {
+    my ($args) = @_;
+
+    my $c = new_app();
+    @ARGV = @$args;
+    parse_input($c);
+
+    return $c;
+}
 
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 #           Testing incorrect options             #
@@ -53,69 +62,51 @@ my $c;
 
 # Lack of required option
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 );
-eval { parse_input($c); };
+eval { new_app_with_args([ qw( cmd1 ) ]) };
 like ( $@, qr{^option 'opt4' is required for command cmd1 at } );
 
 
 # Lack of explicit argument in required option
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4 );
-eval { parse_input($c) };
+eval { new_app_with_args([ qw( cmd1 --opt4 ) ]) };
 like ($@, qr{^missing 1 argument\(s\) for option 'opt4' at });
 
 
 # wrong type in option opt7
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=42 --opt7=foo);
-eval { parse_input($c) };
+eval { new_app_with_args([ qw( cmd1 --opt4=42 --opt7=foo) ]) };
 is( $@, "option 'opt7' requires a value of type 'num'\n" );
 
 
 # Condition returned false
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=somestring --opt1=43 );
-eval { parse_input($c) };
+eval { new_app_with_args([ qw( cmd1 --opt4=somestring --opt1=43 ) ]) };
 is ($@, "incorrect value for option 'opt1': number must be below 42\n");
 
 
 # Conflicting options
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=somestring --opt1=40 --opt2 );
-eval { parse_input($c) };
+eval { new_app_with_args([ qw( cmd1 --opt4=somestring --opt1=40 --opt2 ) ]) };
 like ($@, qr{^options 'opt2' and 'opt1' conflict and can not be used together at });
 
 # Condition returned false (using aliases)
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=somestring --a1=50 --opt2 );
-eval { parse_input($c) };
+eval { new_app_with_args([ qw( cmd1 --opt4=somestring --a1=50 --opt2 ) ]) };
 is ($@, "incorrect value for option 'opt1': number must be below 42\n");
 
 # Conflicting options (using aliases)
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=somestring --a1=40 --opt2 );
-eval { parse_input($c) };
+eval { new_app_with_args([ qw( cmd1 --opt4=somestring --a1=40 --opt2 ) ]) };
 like ($@, qr{options 'opt2' and 'opt1' conflict and can not be used together at });
 
 # test for conflicting aliases
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=somestring --a1=33 --a2=bar );
-eval { parse_input($c) };
+eval { new_app_with_args([ qw( cmd1 --opt4=somestring --a1=33 --a2=bar ) ]) };
 like ($@, qr{options 'opt2' and 'opt1' conflict and can not be used together at });
 
 # test invalid option
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw(cmd1 --opt4=somestring --baz);
-eval { parse_input($c) };
+eval { new_app_with_args([ qw(cmd1 --opt4=somestring --baz) ]) };
 is( $@, "invalid option 'baz'\n" );
 
 
@@ -124,9 +115,7 @@ is( $@, "invalid option 'baz'\n" );
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 ##############################################
-$c = new_app();
-@ARGV = qw( cmd1 --opt4=foo );
-parse_input($c);
+new_app_with_args([ qw( cmd1 --opt4=foo ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 
@@ -136,9 +125,7 @@ is( $c->stash->{two},    42, 'opt3 set stash with default value (2)' );
 
 
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 -opt4=foo --opt3 );
-parse_input($c);
+new_app_with_args([ qw( cmd1 -opt4=foo --opt3 ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt3}, 42, 'opt3 got proper default value' );
@@ -147,9 +134,7 @@ is( $c->stash->{two},    42, 'opt3 set stash value (2)' );
 
 
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=foo --opt3=meep );
-parse_input($c);
+new_app_with_args([ qw( cmd1 --opt4=foo --opt3=meep ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt3}, 'meep', 'opt3 got non-default value' );
@@ -158,17 +143,13 @@ is( $c->stash->{two},    'meep', 'opt3: override stash value(2)' );
 
 
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt2=foo --opt4=foo );
-parse_input($c);
+new_app_with_args([ qw( cmd1 --opt2=foo --opt4=foo ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt2}, 'foo', 'option opt2 was set' );
 
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --a2=foo --opt4=foo );
-parse_input($c);
+new_app_with_args([ qw( cmd1 --a2=foo --opt4=foo ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt2}, 'foo', 'option opt2 set via alias' );
@@ -176,26 +157,19 @@ is( $c->options->{a2}, undef, 'a2 is just an alias');
 
 
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=foo --opt5 );
-parse_input($c);
+new_app_with_args([ qw( cmd1 --opt4=foo --opt5 ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt5}, 1, 'opt5 default value test' );
 
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=foo --opt5 --opt5 --opt5);
-#TODO: should ->parse_input reset options values?
-parse_input($c);
+new_app_with_args([ qw( cmd1 --opt4=foo --opt5 --opt5 --opt5) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt5}, 3, 'opt5 default value test' );
 
 ##############################################
-$c = new_app(); # reset context for re-parse
-@ARGV = qw( cmd1 --opt4=foo --opt6 );
-parse_input($c);
+new_app_with_args([ qw( cmd1 --opt4=foo --opt6 ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt6}, 1, 'opt6 default value test' );
