@@ -41,5 +41,5 @@ t/lib/MyStubPlugin.pm
 t/lib/App/Rad/Plugin/MyStubPlugin.pm
 t/etc/config1.txt
 t/etc/config2.txt
-t/21-named-arguments.t
-t/22-commands-with-args.t
+t/21-named_arguments.t
+t/22-command_with_args.t
