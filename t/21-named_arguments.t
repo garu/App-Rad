@@ -114,8 +114,9 @@ is( $@, "invalid option 'baz'\n" );
 #            Testing correct options              #
 #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
+my $c;
 ##############################################
-new_app_with_args([ qw( cmd1 --opt4=foo ) ]);
+$c = new_app_with_args([ qw( cmd1 --opt4=foo ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 
@@ -125,7 +126,7 @@ is( $c->stash->{two},    42, 'opt3 set stash with default value (2)' );
 
 
 ##############################################
-new_app_with_args([ qw( cmd1 -opt4=foo --opt3 ) ]);
+$c = new_app_with_args([ qw( cmd1 -opt4=foo --opt3 ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt3}, 42, 'opt3 got proper default value' );
@@ -134,7 +135,7 @@ is( $c->stash->{two},    42, 'opt3 set stash value (2)' );
 
 
 ##############################################
-new_app_with_args([ qw( cmd1 --opt4=foo --opt3=meep ) ]);
+$c = new_app_with_args([ qw( cmd1 --opt4=foo --opt3=meep ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt3}, 'meep', 'opt3 got non-default value' );
@@ -143,13 +144,13 @@ is( $c->stash->{two},    'meep', 'opt3: override stash value(2)' );
 
 
 ##############################################
-new_app_with_args([ qw( cmd1 --opt2=foo --opt4=foo ) ]);
+$c = new_app_with_args([ qw( cmd1 --opt2=foo --opt4=foo ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt2}, 'foo', 'option opt2 was set' );
 
 ##############################################
-new_app_with_args([ qw( cmd1 --a2=foo --opt4=foo ) ]);
+$c = new_app_with_args([ qw( cmd1 --a2=foo --opt4=foo ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt2}, 'foo', 'option opt2 set via alias' );
@@ -157,19 +158,19 @@ is( $c->options->{a2}, undef, 'a2 is just an alias');
 
 
 ##############################################
-new_app_with_args([ qw( cmd1 --opt4=foo --opt5 ) ]);
+$c = new_app_with_args([ qw( cmd1 --opt4=foo --opt5 ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt5}, 1, 'opt5 default value test' );
 
 ##############################################
-new_app_with_args([ qw( cmd1 --opt4=foo --opt5 --opt5 --opt5) ]);
+$c = new_app_with_args([ qw( cmd1 --opt4=foo --opt5 --opt5 --opt5) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt5}, 3, 'opt5 default value test' );
 
 ##############################################
-new_app_with_args([ qw( cmd1 --opt4=foo --opt6 ) ]);
+$c = new_app_with_args([ qw( cmd1 --opt4=foo --opt6 ) ]);
 is ($c->cmd, 'cmd1', 'command was set');
 is ($c->options->{'opt4'}, 'foo', 'option opt4 was set');
 is( $c->options->{opt6}, 1, 'opt6 default value test' );
