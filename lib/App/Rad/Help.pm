@@ -52,8 +52,25 @@ sub helpstr {
             $len = length($_) if (length($_) > $len);
         }
 
+        my %commands = map { $_ => 1 } $c->commands();
+        foreach my $group (keys %{$c->{'_command_groups'} || {} }) {
+                $string  .= "$group:\n";
+                foreach my $group_command (@{$c->{'_command_groups'}->{$group} || []}) {
+                        $string .= sprintf(
+                                           "    %-*s\t%s\n", $len, $group_command,
+                                           defined ($c->{'_commands'}->{$group_command}->{'help'})
+                                           ? $c->{'_commands'}->{$group_command}->{'help'}
+                                           : '');
+                        delete $commands{$group_command};
+                }
+                $string.= "\n";
+        }
+
+        $string .= "Other commands:\n" if  %{$c->{'_command_groups'} || {} };
+
+
         # format help string
-        foreach ( sort $c->commands() ) {
+        foreach ( sort keys %commands ) {
             $string .= sprintf "    %-*s\t%s\n", $len, $_, 
                                defined ($c->{'_commands'}->{$_}->help)
                                ? $c->{'_commands'}->{$_}->help

@@ -3,6 +3,7 @@ use 5.006;
 use App::Rad::Parser;
 use App::Rad::Command;
 use App::Rad::Help;
+use App::Rad::Group;
 use Carp ();
 use warnings;
 use strict;
@@ -324,7 +325,10 @@ sub register {
 	my $cmd_obj = App::Rad::Command->new( \%command_options );
 	return unless $cmd_obj;
 
-	#TODO: I don't think this message is ever being printed (wtf?)
+        my $group = App::Rad::Group->get_group_attr_for($command_name);
+        push @{$c->{'_command_groups'}->{$group}}, $command_name if $group;
+
+        #TODO: I don't think this message is ever being printed (wtf?)
 	$c->debug("registering $command_name as a command.");
 
 	$c->{'_commands'}->{$command_name} = $cmd_obj;
@@ -492,6 +496,8 @@ sub output {
 	    return $c->{'output'};
 	}
 }
+
+sub group_commands { return App::Rad::Group::group_commands(@_) }
 
 #=========================#
 #     CONTROL FUNCTIONS   #
