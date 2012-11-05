@@ -3,6 +3,7 @@ use 5.006;
 use App::Rad::Parser;
 use App::Rad::Command;
 use App::Rad::Help;
+use App::Rad::Group;
 use Carp ();
 use warnings;
 use strict;
@@ -324,7 +325,10 @@ sub register {
 	my $cmd_obj = App::Rad::Command->new( \%command_options );
 	return unless $cmd_obj;
 
-	#TODO: I don't think this message is ever being printed (wtf?)
+        my $group = App::Rad::Group->get_group_attr_for($command_name);
+        push @{$c->{'_command_groups'}->{$group}}, $command_name if $group;
+
+        #TODO: I don't think this message is ever being printed (wtf?)
 	$c->debug("registering $command_name as a command.");
 
 	$c->{'_commands'}->{$command_name} = $cmd_obj;
@@ -493,6 +497,8 @@ sub output {
 	}
 }
 
+sub group_commands { return App::Rad::Group::group_commands(@_) }
+
 #=========================#
 #     CONTROL FUNCTIONS   #
 #=========================#
@@ -636,6 +642,38 @@ You can try on the command line:
    [user@host]$ ./myapp.pl bar --drink=martini
     you asked for a martini
 
+If this command layout does not meet your needs, you can also group your commands:
+
+    use App::Rad;
+    App::Rad->run();
+
+    sub setup {
+        my $c = shift;
+
+        $c->register_commands( {
+            foo => 'expand your foo!',
+            bar => 'have a drink! arguments: --drink=DRINK',
+	    });
+        $c->group_commands('foo commands', 'foo');
+    }
+
+    sub foo { ... }
+    sub bar :Group(bar commands) { ... }
+
+Try on the command line:
+
+    [user@host]$ ./myapp.pl
+    Usage: myapp.pl command [arguments]
+
+    Available Commands:
+    foo commands:
+	foo 	expand your foo!
+
+    bar commands:
+	bar 	have a drink! arguments: --drink=DRINK
+
+    Other commands:
+	help	show syntax and available commands
 
 =head1 WARNING
 
@@ -956,6 +994,20 @@ This method lets you easily load into your program one or more configuration fil
 =head2 $c->config
 
 Returns a hash reference with any loaded config values (see C<< $c->load_config() >> above).
+
+
+=head2 $c->group_commands ( I<GROUP_NAME>, I<COMMAND1>, I<COMMAND2>, ... )
+
+Put given commands into the given group. Groups are used to print commands
+that belong together next to each other in the help text. An alternative
+method to add commands to a group is the sub attribute :Group.
+
+    sub setup {
+        my $c = shift;
+        ...
+        $c->group_commands('group','command1','command2');
+    }
+    sub command3 :Group(group2);
 
 
 =head2 $c->register ( I<NAME>, I<CODEREF> [, I<INLINE_HELP> ])
